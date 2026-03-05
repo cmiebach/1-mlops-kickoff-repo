@@ -21,3 +21,10 @@ class _BinarySum:
 def _make_binary_sum(cols):
     """Return a FunctionTransformer that sums the given binary columns."""
     return FunctionTransformer(_BinarySum(cols))
+"""
+Module: Feature Engineering
+---------------------------
+Role: Define the transformation "recipe" (binning, encoding, scaling) to be bundled with the model.
+Input: Configuration (lists of column names).
+Output: scikit-learn ColumnTransformer object.
+"""
