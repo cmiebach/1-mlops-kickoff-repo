@@ -12,7 +12,7 @@ import pandas as pd
 def run_inference(
     model,
     X_infer: pd.DataFrame,
-    include_proba: bool = False,
+    include_proba: bool = True,
 ) -> pd.DataFrame:
     """
     Run the model on new data and return predictions.
@@ -39,10 +39,43 @@ def run_inference(
         index=X_infer.index,
     )
 
-    if include_proba:
-        if not hasattr(model, "predict_proba"):
-            raise TypeError("Model must implement predict_proba().")
+    if include_proba and hasattr(model, "predict_proba"):
         probabilities = model.predict_proba(X_infer)[:, 1]
         result["probability"] = probabilities
 
     return result
+
+from pathlib import Path
+
+
+def predict_and_save(
+    model,
+    X_test: pd.DataFrame,
+    passenger_ids: pd.Series | None,
+    out_path: str,
+) -> pd.DataFrame:
+    """
+    Generate predictions and save them to CSV.
+
+    Args:
+        model: Fitted model.
+        X_test: DataFrame to predict on.
+        passenger_ids: Optional IDs to include in output.
+        out_path: Path to save CSV.
+
+    Returns:
+        DataFrame of saved predictions.
+    """
+
+    preds = model.predict(X_test).astype(int)
+
+    out = pd.DataFrame({"Survived": preds})
+
+    if passenger_ids is not None:
+        out.insert(0, "PassengerId", passenger_ids.values)
+
+    p = Path(out_path)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    out.to_csv(p, index=False)
+
+    return out
