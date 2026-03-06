@@ -451,12 +451,15 @@ def generate_sample(config_path="config.yaml"):
     rng = np.random.default_rng(42)
     n = 2000
 
-    months = rng.integers(6, 9, size=n)
     dep_hours = rng.integers(5, 23, size=n)
     arr_delay = rng.normal(loc=5, scale=25, size=n).round(0)
 
     df = pd.DataFrame({
-        "MONTH": months,
+        "delayed": (arr_delay > 15).astype(int),
+        "temperature_2m": rng.uniform(5, 35, size=n).round(1),
+        "windspeed_10m": rng.uniform(0, 30, size=n).round(1),
+        "weathercode": rng.integers(0, 10, size=n),
+        "MONTH": rng.integers(6, 9, size=n),
         "DAY": rng.integers(1, 29, size=n),
         "CRS_DEP_TIME": dep_hours * 100,
         "ARR_DELAY": arr_delay,
