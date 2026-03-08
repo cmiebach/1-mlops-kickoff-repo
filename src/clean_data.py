@@ -19,6 +19,7 @@ _NIGHT_HOURS = set(range(0, 6)) | {22, 23}
 
 
 def _rename_columns(df):
+    # Support both synthetic sample columns and real OpenSky API columns
     rename_map = {
         "MONTH": "month", "DAY": "day",
         "CRS_DEP_TIME": "crs_dep_time", "ARR_DELAY": "arr_delay",
@@ -27,7 +28,16 @@ def _rename_columns(df):
         "AIR_TIME": "air_time", "DISTANCE": "distance",
     }
     existing = {k: v for k, v in rename_map.items() if k in df.columns}
-    return df.rename(columns=existing)
+    df = df.rename(columns=existing)
+
+    # Derive month/day/crs_dep_time from departure_dt if not already present
+    if "departure_dt" in df.columns and "month" not in df.columns:
+        dep = pd.to_datetime(df["departure_dt"], utc=True)
+        df["month"] = dep.dt.month
+        df["day"] = dep.dt.day
+        df["crs_dep_time"] = dep.dt.hour * 100 + dep.dt.minute
+
+    return df
 
 
 def _engineer_binary_flags(df):
@@ -76,7 +86,9 @@ def _handle_missing_values(df):
     ]
     for col in numeric_cols:
         if col in df.columns and df[col].isna().any():
-            df[col] = df[col].fillna(df[col].median())
+            median_val = df[col].median()
+            # If entire column is NaN, fill with 0
+            df[col] = df[col].fillna(median_val if pd.notna(median_val) else 0)
     for col in ["is_foggy", "is_stormy", "is_night_departure", "is_weekend"]:
         if col in df.columns:
             df[col] = df[col].fillna(0).astype(int)

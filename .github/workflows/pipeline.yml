@@ -1,0 +1,36 @@
+name: ML Pipeline
+
+on:
+  workflow_dispatch:
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+
+    env:
+      OPENSKY_CLIENT_ID: ${{ secrets.OPENSKY_CLIENT_ID }}
+      OPENSKY_CLIENT_SECRET: ${{ secrets.OPENSKY_CLIENT_SECRET }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run pipeline
+        run: python -m src.main
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipeline-outputs
+          path: |
+            models/model.joblib
+            reports/metrics.json
+            reports/predictions.csv

@@ -20,6 +20,7 @@ Design principles (from course guidelines):
 from __future__ import annotations
 
 import logging
+import os
 import time
 from pathlib import Path
 from typing import Optional
@@ -27,6 +28,9 @@ from typing import Optional
 import pandas as pd
 import requests
 import yaml
+from dotenv import load_dotenv
+
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
@@ -148,6 +152,32 @@ def _fetch_weather(
     return df
 
 
+def _get_opensky_token(client_id: str, client_secret: str) -> Optional[str]:
+    """Exchange OpenSky OAuth client credentials for an access token."""
+    token_url = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"
+    try:
+        resp = requests.post(
+            token_url,
+            data={
+                "grant_type": "client_credentials",
+                "client_id": client_id,
+                "client_secret": client_secret,
+            },
+            timeout=15,
+        )
+        resp.raise_for_status()
+        token = resp.json().get("access_token")
+        logger.info("[load_data._get_opensky_token] OAuth token obtained")
+        return token
+    except requests.RequestException as exc:
+        logger.warning(
+            "[load_data._get_opensky_token] Failed to get token: %s. "
+            "Falling back to anonymous access.",
+            exc,
+        )
+        return None
+
+
 def _fetch_flights(
     airport_icao: str,
     start_ts: int,
@@ -186,9 +216,18 @@ def _fetch_flights(
         airport_icao, start_ts, end_ts,
     )
 
+    # Use OpenSky OAuth token if credentials are available (avoids 403)
+    headers = {}
+    client_id = os.getenv("OPENSKY_CLIENT_ID")
+    client_secret = os.getenv("OPENSKY_CLIENT_SECRET")
+    if client_id and client_secret:
+        token = _get_opensky_token(client_id, client_secret)
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+
     for attempt in range(1, retries + 1):
         try:
-            response = requests.get(base_url, params=params, timeout=30)
+            response = requests.get(base_url, params=params, headers=headers, timeout=30)
             response.raise_for_status()
             break
         except requests.RequestException as exc:
@@ -345,15 +384,19 @@ def fetch_and_save_raw(config_path: str | Path = "config.yaml") -> pd.DataFrame:
         hourly_vars=data_cfg["weather_variables"],
     )
 
-    # --- 2. Fetch flights (OpenSky window limited to 7 days; loop monthly) ---
+    # --- 2. Fetch flights (OpenSky limits queries to 1 calendar day) ---
     import datetime
-    start = datetime.datetime.fromisoformat(data_cfg["start_date"])
-    end = datetime.datetime.fromisoformat(data_cfg["end_date"])
+    start = datetime.datetime.fromisoformat(data_cfg["start_date"]).replace(
+        tzinfo=datetime.timezone.utc
+    )
+    end = datetime.datetime.fromisoformat(data_cfg["end_date"]).replace(
+        tzinfo=datetime.timezone.utc
+    )
 
     all_flights = []
     window_start = start
     while window_start < end:
-        window_end = min(window_start + datetime.timedelta(days=7), end)
+        window_end = min(window_start + datetime.timedelta(days=1), end)
         try:
             chunk = _fetch_flights(
                 airport_icao=airport_cfg["icao"],
