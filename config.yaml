@@ -106,6 +106,7 @@ paths:
   model_path:       "models/model.joblib"
   metrics_path:     "reports/metrics.json"
   predictions_path: "reports/predictions.csv"
+  plots_path:       "reports/plots/metrics.png"
 
 # ---------------------------------------------------------------------------
 # Logging

@@ -103,6 +103,8 @@ def main() -> None:
         problem_type=cfg["problem_type"],
     )
 
+    plots= make_plots(model, X_test, y_test)
+
     # 8. Save artifacts
     paths_cfg = cfg["paths"]
     data_cfg = cfg["data"]
@@ -115,6 +117,7 @@ def main() -> None:
     joblib.dump(model, paths_cfg["model_path"])
 
     save_metrics(metrics, paths_cfg["metrics_path"])
+    save_plots(plots, paths_cfg["plots_path"])
 
     df_preds = run_inference(
         model=model, X_infer=X_test, include_proba=True
@@ -126,6 +129,7 @@ def main() -> None:
     print("Done")
     print(f"Model saved:       {paths_cfg['model_path']}")
     print(f"Metrics saved:     {paths_cfg['metrics_path']}")
+    print(f"Plots saved:       {paths_cfg['plots_path']}")
     print(f"Predictions saved: {paths_cfg['predictions_path']}")
     print(f"Metrics:           {metrics}")
 
