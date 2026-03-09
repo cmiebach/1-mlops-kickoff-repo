@@ -4,12 +4,15 @@ channels:
 dependencies:
   - python=3.10
   - pandas
+  - numpy
   - pyyaml
   - scikit-learn
   - joblib
   - pytest
+  - pytest-cov
   - matplotlib
   - seaborn
   - requests
   - ipykernel
-  - dotenv
+  - jupyter
+  - python-dotenv
