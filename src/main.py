@@ -1,13 +1,13 @@
 """
 Module: Main Pipeline
 ---------------------
-Role: Orchestrate the entire flow (Load -> Clean -> Validate -> Train -> Evaluate).
+Role: Orchestrate the entire flow
+(Load -> Clean -> Validate -> Train -> Evaluate).
 Usage: python src/main.py
 """
 
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 
 import joblib
@@ -103,7 +103,7 @@ def main() -> None:
         problem_type=cfg["problem_type"],
     )
 
-    plots= make_plots(model, X_test, y_test)
+    plots = make_plots(model, X_test, y_test)
 
     # 8. Save artifacts
     paths_cfg = cfg["paths"]

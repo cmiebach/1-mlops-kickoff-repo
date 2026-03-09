@@ -19,7 +19,11 @@ def minimal_config(tmp_path):
             "raw_path": str(raw_path),
             "start_date": "2023-06-01",
             "end_date": "2023-06-07",
-            "weather_variables": ["temperature_2m", "windspeed_10m", "weathercode"],
+            "weather_variables": [
+                "temperature_2m",
+                "windspeed_10m",
+                "weathercode",
+            ],
             "delay_threshold_minutes": 15,
         },
     }
