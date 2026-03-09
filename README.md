@@ -1,6 +1,6 @@
 # Flight Delay Prediction — London Heathrow (EGLL)
 
-**Authors:** MLOps Student Team (Caspar, Jan, Fouad, Lea, Ghezlan)  
+**Authors:** Group 2 (Caspar, Jan, Fouad, Lea, Ghezlan)  
 **Course:** MLOps: Master in Business Analytics and Data Science  
 **Status:** In Development (Modularised Pipeline)
 
