@@ -41,6 +41,8 @@ def evaluate_model(
             proba = model.predict_proba(X_eval)[:, 1]
             metrics["roc_auc"] = float(roc_auc_score(y_eval, proba))
             metrics["pr_auc"] = float(average_precision_score(y_eval, proba))
+    else:
+        raise ValueError(f"Unsupported problem_type: {problem_type!r}")
 
     return metrics
 
