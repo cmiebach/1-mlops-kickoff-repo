@@ -35,3 +35,6 @@ data/*
 !data/raw/.gitkeep
 !data/processed/.gitkeep
 !data/inference/.gitkeep
+.claude/
+data/
+reports/
