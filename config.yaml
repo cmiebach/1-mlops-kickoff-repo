@@ -1,10 +1,114 @@
 # MLOps Project Configuration
-# This file will eventually control paths, hyperparameters, and toggles.
 
+# Airport (departure airport to analyse)
+# ---------------------------------------------------------------------------
+airport:
+  icao: "EGLL"              # London Heathrow — change to any ICAO code
+  name: "London Heathrow"
+  latitude: 51.4775
+  longitude: -0.4614
+
+# ---------------------------------------------------------------------------
+# Data ingestion
+# ---------------------------------------------------------------------------
 data:
-  raw: "data/raw/dataset.csv"
-  processed: "data/processed/clean.csv"
+  start_date: "2023-06-01"  # ISO date, inclusive
+  end_date:   "2023-08-31"  # ISO date, inclusive (keep to ~3 months for speed)
 
-train:
-  test_size: 0.2
-  seed: 42
+  delay_threshold_minutes: 15   # Flights delayed more than this are labelled 1
+
+  # Open-Meteo hourly variables to fetch
+  # Full list: https://open-meteo.com/en/docs/historical-weather-api
+  weather_variables:
+    - temperature_2m           # Air temp at 2m (°C)
+    - precipitation            # Rainfall (mm)
+    - windspeed_10m            # Wind speed at 10m (km/h)
+    - winddirection_10m        # Wind direction (degrees)
+    - weathercode              # WMO weather code (fog, snow, storm, etc.)
+    - cloudcover               # Total cloud cover (%)
+
+  raw_path:       "data/raw/flights_raw.csv"
+  processed_path: "data/processed/flights_clean.csv"
+
+# ---------------------------------------------------------------------------
+# Target
+# ---------------------------------------------------------------------------
+target_column: "delayed"    # Binary: 1 = delayed >15 min, 0 = on time
+problem_type:  "classification"
+
+# ---------------------------------------------------------------------------
+# Features
+# ---------------------------------------------------------------------------
+features:
+  # Continuous feature — binned into quantiles (same as rx_ds treatment)
+  quantile_bin:
+    - "windspeed_10m"
+
+  # Numeric features passed through directly (scaled)
+  numeric_passthrough:
+    - "temperature_2m"
+    - "precipitation"
+    - "cloudcover"
+    - "flight_duration_s"
+
+  # Binary/flag features summed or used as-is
+  binary_sum_cols:
+    - "is_foggy"              # engineered in clean_data.py from weathercode
+    - "is_stormy"             # engineered in clean_data.py from weathercode
+    - "is_night_departure"    # engineered in clean_data.py from departure hour
+    - "is_weekend"            # engineered in clean_data.py from departure weekday
+
+  # One-hot encoded categoricals
+  categorical_onehot: []      # expand if you add carrier or aircraft type
+
+  n_bins: 4                   # quantile bins for windspeed
+
+# ---------------------------------------------------------------------------
+# Train / validation / test split
+# ---------------------------------------------------------------------------
+split:
+  test_size:    0.05
+  val_size:     0.15
+  random_state: 42
+
+# ---------------------------------------------------------------------------
+# Validation gates
+# ---------------------------------------------------------------------------
+validation:
+  check_missing_values: true
+  numeric_non_negative_cols:
+    - "windspeed_10m"
+    - "precipitation"
+    - "cloudcover"
+    - "flight_duration_s"
+
+# ---------------------------------------------------------------------------
+# Model
+# ---------------------------------------------------------------------------
+model:
+  active: "random_forest"
+  random_forest:
+    n_estimators: 100
+    max_depth: 6
+    random_state: 42
+  logistic_regression:
+    C: 1.0
+    max_iter: 500
+    random_state: 42
+
+# ---------------------------------------------------------------------------
+# Output paths
+# ---------------------------------------------------------------------------
+paths:
+  model_path:       "models/model.joblib"
+  metrics_path:     "reports/metrics.json"
+  predictions_path: "reports/predictions.csv"
+  plots_path:       "reports/plots/metrics.png"
+
+# ---------------------------------------------------------------------------
+# Logging
+# ---------------------------------------------------------------------------
+logging:
+  level: "INFO"
+  format: "%(asctime)s  %(levelname)-8s  %(name)s  %(message)s"
+  log_path: "logs/pipeline.log"

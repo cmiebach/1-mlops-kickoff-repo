@@ -1,0 +1,14 @@
+name: mlops
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pandas
+  - pyyaml
+  - scikit-learn
+  - joblib
+  - pytest
+  - matplotlib
+  - seaborn
+  - requests
+  - ipykernel
