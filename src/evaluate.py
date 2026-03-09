@@ -51,9 +51,12 @@ def evaluate_model(
             proba = model.predict_proba(X_eval)[:, 1]
             metrics["roc_auc"] = float(roc_auc_score(y_eval, proba))
             metrics["pr_auc"] = float(average_precision_score(y_eval, proba))
-    else:
-        raise ValueError(f"Unsupported problem_type: {problem_type!r}")
-
+            metrics["brier"] = float(np.mean((proba - y_eval)**2))
+            
+        # False negative rate (missed positives)
+        tn, fp, fn, tp = confusion_matrix(y_eval, y_pred).ravel()
+        metrics["fnr"] = float(fn / (fn + tp)) if (fn + tp) > 0 else 0.0
+             
     return metrics
 
 
