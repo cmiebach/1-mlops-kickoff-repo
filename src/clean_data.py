@@ -7,7 +7,6 @@ Output: pandas.DataFrame (Processed/Clean).
 """
 
 from __future__ import annotations
-import datetime
 import logging
 import pandas as pd
 
@@ -19,6 +18,14 @@ _NIGHT_HOURS = set(range(0, 6)) | {22, 23}
 
 
 def _rename_columns(df):
+    """Rename raw uppercase column names to lowercase snake_case.
+
+    Args:
+        df: Raw DataFrame with original column names.
+
+    Returns:
+        DataFrame with renamed columns.
+    """
     rename_map = {
         "MONTH": "month", "DAY": "day",
         "CRS_DEP_TIME": "crs_dep_time", "ARR_DELAY": "arr_delay",
@@ -31,6 +38,14 @@ def _rename_columns(df):
 
 
 def _engineer_binary_flags(df):
+    """Create binary indicator columns from weather, time, and date features.
+
+    Args:
+        df: DataFrame with lowercase column names.
+
+    Returns:
+        DataFrame with added is_foggy, is_stormy, is_night_departure, and is_weekend columns.
+    """
     df = df.copy()
     if "weathercode" in df.columns:
         df["is_foggy"]  = df["weathercode"].isin(_FOG_CODES).astype(int)
@@ -45,13 +60,11 @@ def _engineer_binary_flags(df):
         df["is_night_departure"] = 0
 
     if "month" in df.columns and "day" in df.columns:
-        def _is_weekend(row):
-            try:
-                return int(datetime.date(2023, int(row["month"]), int(row["day"]))
-                           .weekday() in [5, 6])
-            except Exception:
-                return 0
-        df["is_weekend"] = df.apply(_is_weekend, axis=1)
+        dates = pd.to_datetime(
+            {"year": 2023, "month": df["month"], "day": df["day"]},
+            errors="coerce",
+        )
+        df["is_weekend"] = dates.dt.weekday.isin([5, 6]).astype(int).fillna(0).astype(int)
     else:
         df["is_weekend"] = 0
 
@@ -59,6 +72,15 @@ def _engineer_binary_flags(df):
 
 
 def _drop_unused_columns(df, target_column):
+    """Keep only the columns needed for modelling, drop the rest.
+
+    Args:
+        df: DataFrame after feature engineering.
+        target_column: Name of the target column to retain.
+
+    Returns:
+        DataFrame containing only the selected feature and target columns.
+    """
     keep = [
         target_column, "temperature_2m", "precipitation", "windspeed_10m",
         "cloudcover", "flight_duration_s", "air_time", "distance",
@@ -69,6 +91,14 @@ def _drop_unused_columns(df, target_column):
 
 
 def _handle_missing_values(df):
+    """Impute missing values using median for numerics and zero for binary flags.
+
+    Args:
+        df: DataFrame that may contain NaN values.
+
+    Returns:
+        DataFrame with missing values filled.
+    """
     df = df.copy()
     numeric_cols = [
         "temperature_2m", "precipitation", "windspeed_10m",
@@ -90,11 +120,8 @@ def clean_dataframe(
     """Run the full cleaning pipeline on the raw DataFrame."""
     logger.info("[clean_data] Starting. Input shape: %s", df.shape)
     df = _rename_columns(df)
-    print("[DEBUG] cols after rename:", [c for c in df.columns if c in ("weathercode", "crs_dep_time", "month", "day")])
     df = _engineer_binary_flags(df)
-    print("[DEBUG] cols after flags:", [c for c in df.columns if "is_" in c])
     df = _drop_unused_columns(df, target_column)
-    print("[DEBUG] final cols:", list(df.columns))
     df = _handle_missing_values(df)
     if target_column not in df.columns:
         raise ValueError(f"[clean_data] Target '{target_column}' not found after cleaning.")

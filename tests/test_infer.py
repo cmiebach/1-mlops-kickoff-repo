@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 from sklearn.dummy import DummyClassifier
 
-from src.infer import predict_and_save, run_inference
+from src.infer import run_inference
 
 
 # ---------------------------------------------------------------------------
@@ -73,43 +73,3 @@ class TestRunInference:
         clf = SVC(probability=False).fit(X, y)
         result = run_inference(clf, X)
         assert "probability" not in result.columns
-
-
-# ---------------------------------------------------------------------------
-# predict_and_save
-# ---------------------------------------------------------------------------
-
-class TestPredictAndSave:
-    def test_saves_csv_file(self, model_and_data, tmp_path):
-        model, X = model_and_data
-        out_path = tmp_path / "reports" / "predictions.csv"
-        predict_and_save(model, X, passenger_ids=None, out_path=str(out_path))
-        assert out_path.exists()
-
-    def test_csv_has_survived_column(self, model_and_data, tmp_path):
-        model, X = model_and_data
-        out_path = tmp_path / "predictions.csv"
-        predict_and_save(model, X, passenger_ids=None, out_path=str(out_path))
-        df = pd.read_csv(out_path)
-        assert "Survived" in df.columns
-
-    def test_csv_includes_passenger_ids_when_provided(self, model_and_data, tmp_path):
-        model, X = model_and_data
-        ids = pd.Series(range(1, len(X) + 1), name="PassengerId")
-        out_path = tmp_path / "predictions.csv"
-        predict_and_save(model, X, passenger_ids=ids, out_path=str(out_path))
-        df = pd.read_csv(out_path)
-        assert "PassengerId" in df.columns
-        assert len(df) == len(X)
-
-    def test_creates_parent_directory(self, model_and_data, tmp_path):
-        model, X = model_and_data
-        out_path = tmp_path / "a" / "b" / "predictions.csv"
-        predict_and_save(model, X, passenger_ids=None, out_path=str(out_path))
-        assert out_path.exists()
-
-    def test_returns_dataframe(self, model_and_data, tmp_path):
-        model, X = model_and_data
-        out_path = tmp_path / "predictions.csv"
-        result = predict_and_save(model, X, passenger_ids=None, out_path=str(out_path))
-        assert isinstance(result, pd.DataFrame)

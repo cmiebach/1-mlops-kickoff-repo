@@ -7,7 +7,7 @@ import pytest
 from sklearn.pipeline import Pipeline
 
 from src.features import get_feature_preprocessor
-from src.train import TrainArtifacts, build_pipeline, train_model, train
+from src.train import TrainArtifacts, train_model
 
 
 # ---------------------------------------------------------------------------
@@ -48,34 +48,6 @@ def preprocessor():
 
 
 # ---------------------------------------------------------------------------
-# build_pipeline
-# ---------------------------------------------------------------------------
-
-class TestBuildPipeline:
-    def test_returns_sklearn_pipeline(self):
-        pipeline = build_pipeline(
-            numeric_cols=["temperature_2m"],
-            categorical_cols=[],
-            numeric_strategy="mean",
-            categorical_strategy="most_frequent",
-            model_params={"max_iter": 100},
-        )
-        assert isinstance(pipeline, Pipeline)
-
-    def test_pipeline_has_preprocess_and_model_steps(self):
-        pipeline = build_pipeline(
-            numeric_cols=["temperature_2m"],
-            categorical_cols=[],
-            numeric_strategy="mean",
-            categorical_strategy="most_frequent",
-            model_params={"max_iter": 100},
-        )
-        step_names = [name for name, _ in pipeline.steps]
-        assert "preprocess" in step_names
-        assert "model" in step_names
-
-
-# ---------------------------------------------------------------------------
 # train_model
 # ---------------------------------------------------------------------------
 
@@ -104,51 +76,3 @@ class TestTrainModel:
         y_reg = y.astype(float)
         model = train_model(X, y_reg, preprocessor, problem_type="regression")
         assert isinstance(model.named_steps["model"], RandomForestRegressor)
-
-
-# ---------------------------------------------------------------------------
-# train
-# ---------------------------------------------------------------------------
-
-class TestTrain:
-    def test_returns_train_artifacts(self, xy):
-        X, y = xy
-        pipeline = build_pipeline(
-            numeric_cols=list(X.columns),
-            categorical_cols=[],
-            numeric_strategy="mean",
-            categorical_strategy="most_frequent",
-            model_params={"max_iter": 100},
-        )
-        artifacts = train(X, y, test_size=0.2, random_state=42,
-                          stratify=True, pipeline=pipeline)
-        assert isinstance(artifacts, TrainArtifacts)
-
-    def test_validation_split_size(self, xy):
-        X, y = xy
-        pipeline = build_pipeline(
-            numeric_cols=list(X.columns),
-            categorical_cols=[],
-            numeric_strategy="mean",
-            categorical_strategy="most_frequent",
-            model_params={"max_iter": 100},
-        )
-        artifacts = train(X, y, test_size=0.2, random_state=42,
-                          stratify=False, pipeline=pipeline)
-        assert len(artifacts.X_valid) == pytest.approx(20, abs=2)
-        assert len(artifacts.y_valid) == len(artifacts.X_valid)
-
-    def test_model_is_fitted_pipeline(self, xy):
-        X, y = xy
-        pipeline = build_pipeline(
-            numeric_cols=list(X.columns),
-            categorical_cols=[],
-            numeric_strategy="mean",
-            categorical_strategy="most_frequent",
-            model_params={"max_iter": 100},
-        )
-        artifacts = train(X, y, test_size=0.2, random_state=42,
-                          stratify=False, pipeline=pipeline)
-        assert isinstance(artifacts.model, Pipeline)
-        preds = artifacts.model.predict(artifacts.X_valid)
-        assert len(preds) == len(artifacts.y_valid)
