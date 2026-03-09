@@ -61,13 +61,3 @@ def validate_dataframe(
 
     if numeric_non_negative_cols:
         _check_non_negative(df, numeric_non_negative_cols)
-
-
-def validate_required_columns(df: pd.DataFrame, required: list[str]) -> None:
-    _check_required_columns(df, required)
-
-
-def validate_target_binary(df: pd.DataFrame, target_col: str) -> None:
-    vals = sorted(df[target_col].dropna().unique().tolist())
-    if vals not in ([0, 1], [0], [1]):
-        raise ValueError(f"Target '{target_col}' must be 0/1. Found: {vals}")
