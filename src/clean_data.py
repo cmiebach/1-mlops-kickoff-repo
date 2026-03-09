@@ -61,7 +61,7 @@ def _engineer_binary_flags(df):
 def _drop_unused_columns(df, target_column):
     keep = [
         target_column, "temperature_2m", "precipitation", "windspeed_10m",
-        "visibility", "cloudcover", "flight_duration_s", "air_time", "distance",
+        "cloudcover", "flight_duration_s", "air_time", "distance",
         "is_foggy", "is_stormy", "is_night_departure", "is_weekend",
     ]
     available = [c for c in keep if c in df.columns]
@@ -72,7 +72,7 @@ def _handle_missing_values(df):
     df = df.copy()
     numeric_cols = [
         "temperature_2m", "precipitation", "windspeed_10m",
-        "visibility", "cloudcover", "flight_duration_s", "air_time", "distance",
+        "cloudcover", "flight_duration_s", "air_time", "distance",
     ]
     for col in numeric_cols:
         if col in df.columns and df[col].isna().any():

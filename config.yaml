@@ -25,7 +25,6 @@ data:
     - windspeed_10m            # Wind speed at 10m (km/h)
     - winddirection_10m        # Wind direction (degrees)
     - weathercode              # WMO weather code (fog, snow, storm, etc.)
-    - visibility               # Visibility (m)
     - cloudcover               # Total cloud cover (%)
 
   raw_path:       "data/raw/flights_raw.csv"
@@ -49,7 +48,6 @@ features:
   numeric_passthrough:
     - "temperature_2m"
     - "precipitation"
-    - "visibility"
     - "cloudcover"
     - "flight_duration_s"
 
@@ -81,7 +79,6 @@ validation:
   numeric_non_negative_cols:
     - "windspeed_10m"
     - "precipitation"
-    - "visibility"
     - "cloudcover"
     - "flight_duration_s"
 

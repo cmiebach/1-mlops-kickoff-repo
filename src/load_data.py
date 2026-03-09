@@ -20,6 +20,7 @@ Design principles (from course guidelines):
 from __future__ import annotations
 
 import logging
+import os
 import time
 from pathlib import Path
 from typing import Optional
@@ -27,12 +28,65 @@ from typing import Optional
 import pandas as pd
 import requests
 import yaml
+from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
+
+def _get_opensky_token() -> str | None:
+    """Obtain an OAuth2 bearer token from OpenSky Network.
+
+    Reads OPENSKY_CLIENT_ID and OPENSKY_CLIENT_SECRET from
+    credentials.env in the project root.
+
+    Returns:
+        Bearer token string, or None if credentials are missing.
+
+    Raises:
+        RuntimeError: If credentials are present but token request
+                      fails.
+    """
+    load_dotenv("credentials.env")
+    client_id = os.environ.get("OPENSKY_CLIENT_ID")
+    client_secret = os.environ.get("OPENSKY_CLIENT_SECRET")
+
+    if not client_id or not client_secret:
+        logger.warning(
+            "[load_data._get_opensky_token] No OpenSky "
+            "credentials found — falling back to anonymous."
+        )
+        return None
+
+    token_url = (
+        "https://auth.opensky-network.org/auth/realms/"
+        "opensky-network/protocol/openid-connect/token"
+    )
+    resp = requests.post(
+        token_url,
+        data={
+            "grant_type": "client_credentials",
+            "client_id": client_id,
+            "client_secret": client_secret,
+        },
+        timeout=30,
+    )
+    if resp.status_code != 200:
+        raise RuntimeError(
+            "[load_data._get_opensky_token] Token request "
+            f"failed ({resp.status_code}): {resp.text[:200]}"
+        )
+
+    token = resp.json()["access_token"]
+    logger.info(
+        "[load_data._get_opensky_token] "
+        "Bearer token obtained."
+    )
+    return token
+
 
 def _load_config(config_path: str | Path) -> dict:
     """Load and validate the YAML config file.
@@ -152,54 +206,69 @@ def _fetch_flights(
     airport_icao: str,
     start_ts: int,
     end_ts: int,
+    token: str | None = None,
     retries: int = 3,
     backoff: float = 2.0,
 ) -> pd.DataFrame:
-    """Call the OpenSky Network REST API for departure flights.
+    """Call the OpenSky Network REST API for departures.
 
-    OpenSky anonymous access is free (rate-limited to ~400 flights per call).
-    Endpoint: https://opensky-network.org/api/flights/departure
+    Uses OAuth2 bearer token when available, otherwise
+    falls back to anonymous access.
 
     Args:
-        airport_icao: ICAO code of the departure airport, e.g. "EGLL".
-        start_ts:     Unix timestamp for the start of the window.
-        end_ts:       Unix timestamp for the end of the window (max 7-day window).
-        retries:      Number of retry attempts on transient failures.
-        backoff:      Seconds to wait between retries.
+        airport_icao: ICAO code, e.g. "EGLL".
+        start_ts:     Unix start timestamp.
+        end_ts:       Unix end timestamp (max 1-day window
+                      for authenticated users).
+        token:        Optional OAuth2 bearer token.
+        retries:      Retry attempts on transient failures.
+        backoff:      Seconds between retries.
 
     Returns:
         DataFrame with one row per departure flight.
 
     Raises:
-        RuntimeError: If the API returns a non-200 status after all retries.
+        RuntimeError: After all retries are exhausted.
     """
-    base_url = "https://opensky-network.org/api/flights/departure"
+    base_url = (
+        "https://opensky-network.org/api/flights/departure"
+    )
     params = {
         "airport": airport_icao,
         "begin": start_ts,
         "end": end_ts,
     }
+    headers = {}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
 
     logger.info(
-        "[load_data._fetch_flights] Requesting departures from %s "
-        "(unix %d to %d)",
+        "[load_data._fetch_flights] Requesting departures"
+        " from %s (unix %d to %d)",
         airport_icao, start_ts, end_ts,
     )
 
     for attempt in range(1, retries + 1):
         try:
-            response = requests.get(base_url, params=params, timeout=30)
+            response = requests.get(
+                base_url,
+                params=params,
+                headers=headers,
+                timeout=30,
+            )
             response.raise_for_status()
             break
         except requests.RequestException as exc:
             logger.warning(
-                "[load_data._fetch_flights] Attempt %d/%d failed: %s",
+                "[load_data._fetch_flights] "
+                "Attempt %d/%d failed: %s",
                 attempt, retries, exc,
             )
             if attempt == retries:
                 raise RuntimeError(
-                    f"[load_data._fetch_flights] All {retries} retries exhausted. "
-                    f"Last error: {exc}"
+                    "[load_data._fetch_flights] "
+                    f"All {retries} retries exhausted."
+                    f" Last error: {exc}"
                 ) from exc
             time.sleep(backoff * attempt)
 
@@ -345,29 +414,41 @@ def fetch_and_save_raw(config_path: str | Path = "config.yaml") -> pd.DataFrame:
         hourly_vars=data_cfg["weather_variables"],
     )
 
-    # --- 2. Fetch flights (OpenSky window limited to 7 days; loop monthly) ---
+    # --- 2. Fetch flights (1-day windows for authenticated access) ---
     import datetime
-    start = datetime.datetime.fromisoformat(data_cfg["start_date"])
-    end = datetime.datetime.fromisoformat(data_cfg["end_date"])
+    token = _get_opensky_token()
+
+    start = datetime.datetime.fromisoformat(
+        data_cfg["start_date"]
+    )
+    end = datetime.datetime.fromisoformat(
+        data_cfg["end_date"]
+    )
 
     all_flights = []
     window_start = start
     while window_start < end:
-        window_end = min(window_start + datetime.timedelta(days=7), end)
+        window_end = min(
+            window_start + datetime.timedelta(days=1), end
+        )
         try:
             chunk = _fetch_flights(
                 airport_icao=airport_cfg["icao"],
                 start_ts=int(window_start.timestamp()),
                 end_ts=int(window_end.timestamp()),
+                token=token,
             )
             all_flights.append(chunk)
         except RuntimeError as exc:
             logger.warning(
-                "[load_data.fetch_and_save_raw] Skipping window %s–%s: %s",
-                window_start.date(), window_end.date(), exc,
+                "[load_data.fetch_and_save_raw] "
+                "Skipping window %s to %s: %s",
+                window_start.date(),
+                window_end.date(),
+                exc,
             )
         window_start = window_end
-        time.sleep(1)  # Respectful rate-limiting for anonymous OpenSky access
+        time.sleep(1)  # Rate-limiting for OpenSky
 
     if not all_flights:
         raise RuntimeError(
