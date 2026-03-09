@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 import pandas as pd
-from sklearn.metrics import accuracy_score, f1_score, roc_auc_score, average_precision_score, precision_recall_curve, confusion_matrix, classification_report
+from sklearn.metrics import accuracy_score, f1_score, roc_auc_score, average_precision_score, precision_recall_curve, confusion_matrix, classification_report, precision_score, recall_score
 
 
 def evaluate_model(
@@ -56,7 +56,10 @@ def evaluate_model(
         # False negative rate (missed positives)
         tn, fp, fn, tp = confusion_matrix(y_eval, y_pred).ravel()
         metrics["fnr"] = float(fn / (fn + tp)) if (fn + tp) > 0 else 0.0
-             
+
+    else:
+        raise ValueError(f"Unsupported problem_type: '{problem_type}'. Expected 'classification'.")
+
     return metrics
 
 
