@@ -19,7 +19,7 @@ from src.clean_data import clean_dataframe
 from src.validate import validate_dataframe
 from src.features import get_feature_preprocessor
 from src.train import train_model
-from src.evaluate import evaluate_model, save_metrics
+from src.evaluate import evaluate_model, make_plots, save_metrics, save_plots
 from src.infer import run_inference
 
 
