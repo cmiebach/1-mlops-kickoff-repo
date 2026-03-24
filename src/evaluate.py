@@ -16,6 +16,8 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import accuracy_score, f1_score, roc_auc_score, average_precision_score, precision_recall_curve, confusion_matrix, classification_report, precision_score, recall_score
 
+from src.logger import get_logger
+logger = get_logger(__name__)
 
 def evaluate_model(
     model,
@@ -34,6 +36,8 @@ def evaluate_model(
     Returns:
         Dictionary of metric name → float value.
     """
+    logger.info("[evaluate] Starting evaluation on %d samples", len(y_eval))
+    
     y_pred = model.predict(X_eval)
     metrics: dict[str, float] = {}
 
@@ -58,8 +62,19 @@ def evaluate_model(
         metrics["fnr"] = float(fn / (fn + tp)) if (fn + tp) > 0 else 0.0
 
     else:
+        logger.error(
+            "[evaluate] Unsupported problem_type: '%s'. Expected 'classification'.",
+            problem_type,
+        )    
         raise ValueError(f"Unsupported problem_type: '{problem_type}'. Expected 'classification'.")
-
+    
+    logger.info(
+        "[evaluate] Done | accuracy=%.4f | f1=%.4f | roc_auc=%.4f | pr_auc=%.4f",
+        metrics.get("accuracy", 0.0),
+        metrics.get("f1", 0.0),
+        metrics.get("roc_auc", 0.0),
+        metrics.get("pr_auc", 0.0),
+    )
     return metrics
 
 
