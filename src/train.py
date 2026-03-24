@@ -4,6 +4,9 @@ import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.pipeline import Pipeline
+from src.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -30,11 +33,30 @@ def train_model(
     Returns:
         Fitted sklearn Pipeline.
     """
+    logger.info(
+        "[train] Starting | problem_type=%s, train_rows=%d, features=%d",
+        problem_type, len(X_train), X_train.shape[1],
+    )
+
     if problem_type == "classification":
         estimator = RandomForestClassifier(n_estimators=100, random_state=42)
-    else:
+    elif problem_type == "regression":
         estimator = RandomForestRegressor(n_estimators=100, random_state=42)
+    else:
+        logger.error(
+            "[train] Unsupported problem_type: '%s'. Expected 'classification' or 'regression'.",
+            problem_type,
+        )
+        raise ValueError(
+            f"Unsupported problem_type: '{problem_type}'. Expected 'classification' or 'regression'."
+        )
 
     pipeline = Pipeline(steps=[("preprocessor", preprocessor), ("model", estimator)])
     pipeline.fit(X_train, y_train)
+
+    logger.info(
+        "[train] Done | estimator=%s, n_estimators=100",
+        type(estimator).__name__,
+    )
+
     return pipeline

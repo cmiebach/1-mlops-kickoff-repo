@@ -7,10 +7,10 @@ Output: pandas.DataFrame (Processed/Clean).
 """
 
 from __future__ import annotations
-import logging
 import pandas as pd
 
-logger = logging.getLogger(__name__)
+from src.logger import get_logger
+logger = get_logger(__name__)
 
 _FOG_CODES   = {45, 48}
 _STORM_CODES = {95, 96, 99, 65, 67, 75, 77}

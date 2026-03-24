@@ -19,7 +19,8 @@ Design principles (from course guidelines):
 
 from __future__ import annotations
 
-import logging
+from src.logger import get_logger
+
 import os
 import time
 from pathlib import Path
@@ -30,7 +31,7 @@ import requests
 import yaml
 from dotenv import load_dotenv
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # ---------------------------------------------------------------------------
 # Internal helpers
@@ -554,5 +555,7 @@ def generate_sample(config_path="config.yaml"):
     raw_path = Path(data_cfg["raw_path"])
     raw_path.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(raw_path, index=False)
-    print(f"[generate_sample] Saved {len(df)} rows to {raw_path}")
+
+    logger.info("[load_data.generate_sample] Saved %d rows to %s", len(df), raw_path)
+    
     return df
