@@ -21,6 +21,9 @@ from src.features import get_feature_preprocessor
 from src.train import train_model
 from src.evaluate import evaluate_model, make_plots, save_metrics, save_plots
 from src.infer import run_inference
+from src.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 def load_config(path: str = "config.yaml") -> dict:
@@ -32,6 +35,7 @@ def load_config(path: str = "config.yaml") -> dict:
 
 def main() -> None:
     cfg = load_config("config.yaml")
+    logger.info("[main] Pipeline started")
 
     # 1. Load raw data
     df_raw = load_raw_data(config_path="config.yaml")
@@ -86,6 +90,10 @@ def main() -> None:
         random_state=split_cfg["random_state"],
         stratify=y_temp,
     )
+    logger.info(
+        "[main] Data split | train=%d, val=%d, test=%d",
+        len(X_train), len(X_val), len(X_test),
+    )
 
     # 6. Train
     model = train_model(
@@ -126,13 +134,14 @@ def main() -> None:
     pred_path.parent.mkdir(parents=True, exist_ok=True)
     df_preds.to_csv(pred_path, index=True)
 
-    print("Done")
-    print(f"Model saved:       {paths_cfg['model_path']}")
-    print(f"Metrics saved:     {paths_cfg['metrics_path']}")
-    print(f"Plots saved:       {paths_cfg['plots_path']}")
-    print(f"Predictions saved: {paths_cfg['predictions_path']}")
-    print(f"Metrics:           {metrics}")
+    logger.info("[main] Pipeline complete")
+    logger.info("[main] Model saved:       %s", paths_cfg["model_path"])
+    logger.info("[main] Metrics saved:     %s", paths_cfg["metrics_path"])
+    logger.info("[main] Plots saved:       %s", paths_cfg["plots_path"])
+    logger.info("[main] Predictions saved: %s", paths_cfg["predictions_path"])
+    logger.info("[main] Metrics: %s", metrics)
 
 
 if __name__ == "__main__":
     main()
+    
