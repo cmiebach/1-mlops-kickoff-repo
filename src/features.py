@@ -5,6 +5,8 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import KBinsDiscretizer, OneHotEncoder
 from sklearn.preprocessing import FunctionTransformer
 
+from src.logger import get_logger
+logger = get_logger(__name__)
 
 class _BinarySum:
     """Picklable transformer that row-sums a fixed set of binary columns."""
@@ -44,6 +46,14 @@ def get_feature_preprocessor(
     Returns:
         An unfitted ColumnTransformer.
     """
+
+    logger.info(
+        "[features] Building preprocessor | bin_cols=%d, onehot_cols=%d, numeric_cols=%d, binary_sum_cols=%d",
+        len(quantile_bin_cols),
+        len(categorical_onehot_cols),
+        len(numeric_passthrough_cols),
+        len(binary_sum_cols),
+    )
     transformers = []
 
     if quantile_bin_cols:
@@ -73,5 +83,7 @@ def get_feature_preprocessor(
             _make_binary_sum(binary_sum_cols),
             binary_sum_cols,
         ))
-
+        
+    logger.info("[features] Preprocessor built with %d transformer(s)", len(transformers))
+    
     return ColumnTransformer(transformers=transformers, remainder="drop")
