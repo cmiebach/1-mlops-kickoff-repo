@@ -7,6 +7,9 @@ Output: Predictions (Array or DataFrame).
 """
 from __future__ import annotations
 import pandas as pd
+from src.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 def run_inference(
@@ -25,11 +28,14 @@ def run_inference(
     Returns:
         DataFrame with 'prediction' and optional 'probability'.
     """
+    logger.info("[infer] Starting inference on %d rows", len(X_infer))
 
     if X_infer.empty:
+        logger.error("[infer] Input DataFrame is empty")
         raise ValueError("Input DataFrame is empty.")
 
     if not hasattr(model, "predict"):
+        logger.error("[infer] Model does not implement predict() — got type: %s", type(model).__name__)
         raise TypeError("Model must implement predict().")
 
     predictions = model.predict(X_infer)
@@ -42,5 +48,11 @@ def run_inference(
     if include_proba and hasattr(model, "predict_proba"):
         probabilities = model.predict_proba(X_infer)[:, 1]
         result["probability"] = probabilities
+
+    logger.info(
+        "[infer] Done | predicted_delayed=%d, predicted_on_time=%d",
+        int((predictions == 1).sum()),
+        int((predictions == 0).sum()),
+    )
 
     return result
