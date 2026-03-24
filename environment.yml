@@ -9,6 +9,7 @@ dependencies:
   - scikit-learn
   - joblib
   - pytest
+  - wandb
   - pytest-cov
   - matplotlib
   - seaborn
