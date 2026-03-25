@@ -48,7 +48,9 @@ def _wandb_get_str(cfg: Dict[str, Any], key: str, default: str = '') -> str:
     return str(value).strip() if value is not None else default
 
 
-def _wandb_get_bool(cfg: Dict[str, Any], key: str, default: bool = False) -> bool:
+def _wandb_get_bool(
+    cfg: Dict[str, Any], key: str, default: bool = False
+) -> bool:
     wandb_cfg = cfg.get('wandb')
     if not isinstance(wandb_cfg, dict):
         return default
@@ -85,9 +87,11 @@ def main() -> None:
         wandb_project = _wandb_get_str(cfg, 'project')
         if not wandb_project:
             raise ValueError(
-                'config.yaml: wandb.project must be non-empty when wandb.enabled is true'
+                'config.yaml: wandb.project must be non-empty '
+                'when wandb.enabled is true'
             )
         wandb_run = wandb.init(
+            entity=_wandb_get_str(cfg, 'entity') or None,
             project=wandb_project,
             name=_wandb_get_str(cfg, 'name') or None,
             job_type=_wandb_get_str(cfg, 'job_type', default='training'),
@@ -201,7 +205,10 @@ def main() -> None:
             problem_type=cfg["problem_type"],
         )
         if wandb_run is not None:
-            wandb.log({f'metrics/val/{k}': float(v) for k, v in metrics.items()})
+            wandb.log({
+                f'metrics/val/{k}': float(v)
+                for k, v in metrics.items()
+            })
 
         plots = make_plots(model, X_test, y_test)
 
@@ -226,11 +233,15 @@ def main() -> None:
         # 9. Log model artifact to W&B + promote to 'prod'
         # ----------------------------
         if wandb_run is not None:
-            model_artifact_name = _wandb_get_str(cfg, 'model_artifact_name', default='model')
+            model_artifact_name = _wandb_get_str(
+                cfg, 'model_artifact_name', default='model'
+            )
             model_artifact = wandb.Artifact(
                 name=model_artifact_name,
                 type='model',
-                description='Scikit-learn pipeline (preprocessing + estimator)',
+                description=(
+                    'Scikit-learn pipeline (preprocessing + estimator)'
+                ),
             )
             model_artifact.add_file(str(model_artifact_path))
             logged = wandb.log_artifact(model_artifact)
@@ -258,8 +269,12 @@ def main() -> None:
         pred_path.parent.mkdir(parents=True, exist_ok=True)
         df_preds.to_csv(pred_path, index=True)
 
-        if wandb_run is not None and _wandb_get_bool(cfg, 'log_predictions', default=False):
-            model_artifact_name = _wandb_get_str(cfg, 'model_artifact_name', default='model')
+        if wandb_run is not None and _wandb_get_bool(
+            cfg, 'log_predictions', default=False
+        ):
+            model_artifact_name = _wandb_get_str(
+                cfg, 'model_artifact_name', default='model'
+            )
             pred_artifact = wandb.Artifact(
                 name=f'{model_artifact_name}-predictions',
                 type='predictions',
@@ -272,7 +287,9 @@ def main() -> None:
         logger.info("[main] Model saved:       %s", paths_cfg["model_path"])
         logger.info("[main] Metrics saved:     %s", paths_cfg["metrics_path"])
         logger.info("[main] Plots saved:       %s", paths_cfg["plots_path"])
-        logger.info("[main] Predictions saved: %s", paths_cfg["predictions_path"])
+        logger.info(
+            "[main] Predictions saved: %s", paths_cfg["predictions_path"]
+        )
         logger.info("[main] Metrics: %s", metrics)
 
     except Exception:
@@ -287,4 +304,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

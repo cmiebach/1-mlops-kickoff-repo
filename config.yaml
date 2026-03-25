@@ -118,7 +118,8 @@ logging:
 # ---------------------------------------------------------------------------
 wandb:
   enabled: true
-  project: "group-2-mlops/flight-delay-prediction"
+  project: "flight-delay-prediction"
+  entity: "group-2-mlops"
   name: "01-random-forest-baseline"
   job_type: "training"
   group: "egll-baselines"
