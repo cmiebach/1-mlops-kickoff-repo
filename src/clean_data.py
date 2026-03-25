@@ -131,16 +131,21 @@ def _handle_missing_values(df):
 def clean_dataframe(
     df: pd.DataFrame,
     target_column: str = "delayed",
+    inference_mode: bool = False,
 ) -> pd.DataFrame:
-    """Run the full cleaning pipeline on the raw DataFrame."""
+    """Run the full cleaning pipeline on the raw DataFrame.
+
+    Set inference_mode=True when calling from the API (no target column present).
+    """
     logger.info(
         "[clean_data] Starting. Input shape: %s", df.shape
     )
     df = _rename_columns(df)
     df = _engineer_binary_flags(df)
-    df = _drop_unused_columns(df, target_column)
+    if not inference_mode:
+        df = _drop_unused_columns(df, target_column)
     df = _handle_missing_values(df)
-    if target_column not in df.columns:
+    if not inference_mode and target_column not in df.columns:
         raise ValueError(
             f"[clean_data] Target '{target_column}' "
             "not found after cleaning."
