@@ -246,9 +246,7 @@ def main() -> None:
             model_artifact.add_file(str(model_artifact_path))
             logged = wandb.log_artifact(model_artifact)
             logged.wait()
-            logged.aliases.append('prod')
-            logged.save()
-            logger.info('Model artifact logged to W&B with alias prod')
+            logger.info('Model artifact logged to W&B')
 
             if _wandb_get_bool(cfg, 'log_processed_data', default=False):
                 data_artifact = wandb.Artifact(
