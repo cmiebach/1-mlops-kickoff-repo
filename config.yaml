@@ -112,3 +112,23 @@ logging:
   level: "INFO"
   format: "%(asctime)s  %(levelname)-8s  %(name)s  %(message)s"
   log_path: "logs/pipeline.log"
+
+# ---------------------------------------------------------------------------
+# W&B Experiment Tracking
+# ---------------------------------------------------------------------------
+wandb:
+  enabled: true
+  project: "flight-delay-prediction"
+  entity: "group-2-mlops"
+  name: "01-random-forest-baseline"
+  job_type: "training"
+  group: "egll-baselines"
+  tags: ["baseline", "random-forest", "v1"]
+  notes: "Baseline Random Forest on synthetic EGLL data"
+  model_artifact_name: "flight-delay-model"
+  log_processed_data: true
+  log_predictions: true
+  log_confusion_matrix: true
+  log_predictions_table: true
+  predictions_table_rows: 200
+  class_names: ["On Time", "Delayed"]

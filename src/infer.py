@@ -6,10 +6,30 @@ Input: Trained Model + New Data.
 Output: Predictions (Array or DataFrame).
 """
 from __future__ import annotations
+
+from pathlib import Path
+
+import joblib
 import pandas as pd
+import wandb
+
 from src.logger import get_logger
 
 logger = get_logger(__name__)
+
+
+def load_model_from_registry(cfg: dict):
+    """Download the 'prod' model artifact from W&B registry."""
+    wandb_cfg = cfg.get('wandb', {})
+    project = wandb_cfg.get('project', '')
+    artifact_name = wandb_cfg.get('model_artifact_name', 'model')
+
+    api = wandb.Api()
+    artifact = api.artifact(f'{project}/{artifact_name}:prod', type='model')
+    artifact_dir = artifact.download()
+    model_path = Path(artifact_dir) / 'model.joblib'
+    logger.info('Model loaded from W&B registry: %s:prod', artifact_name)
+    return joblib.load(model_path)
 
 
 def run_inference(
