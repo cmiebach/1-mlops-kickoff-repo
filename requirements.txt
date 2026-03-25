@@ -1,0 +1,14 @@
+# requirements.txt — must be present for the CI pip install step
+fastapi
+uvicorn
+pydantic
+pandas
+scikit-learn
+joblib
+wandb
+python-dotenv
+pyyaml
+numpy
+requests
+matplotlib
+seaborn
