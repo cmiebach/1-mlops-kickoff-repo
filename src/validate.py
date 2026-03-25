@@ -6,43 +6,69 @@ from src.logger import get_logger
 logger = get_logger(__name__)
 
 
-def _check_required_columns(df: pd.DataFrame, required: list[str]) -> None:
+def _check_required_columns(
+    df: pd.DataFrame, required: list[str],
+) -> None:
     missing = [c for c in required if c not in df.columns]
     if missing:
-        logger.error("[validate] Missing required columns: %s", missing)
+        logger.error(
+            "[validate] Missing required columns: %s",
+            missing,
+        )
         raise ValueError(f"Missing columns: {missing}")
 
 
-def _check_missing_values(df: pd.DataFrame, columns: list[str]) -> None:
+def _check_missing_values(
+    df: pd.DataFrame, columns: list[str],
+) -> None:
     for col in columns:
         if col in df.columns and df[col].isna().any():
-            logger.error("[validate] Null values found in column '%s'", col)
-            raise ValueError(f"Null values found in column '{col}'")
+            logger.error(
+                "[validate] Null values in column '%s'",
+                col,
+            )
+            raise ValueError(
+                f"Null values found in column '{col}'"
+            )
 
 
-def _check_target_values(df: pd.DataFrame, target_col: str, allowed: list) -> None:
+def _check_target_values(
+    df: pd.DataFrame, target_col: str, allowed: list,
+) -> None:
     unique_vals = set(df[target_col].dropna().unique())
     unexpected = unique_vals - set(allowed)
     if unexpected:
         logger.error(
-            "[validate] Unexpected target values in '%s': %s", target_col, unexpected
-        )
-        raise ValueError(f"Unexpected target values in '{target_col}': {unexpected}")
-    if len(unique_vals) < 2:
-        logger.error(
-            "[validate] Target '%s' has only 1 class present: %s", target_col, unique_vals
+            "[validate] Unexpected target values "
+            "in '%s': %s",
+            target_col, unexpected,
         )
         raise ValueError(
-            f"Target '{target_col}' has only 1 class present: {unique_vals}"
+            f"Unexpected target values "
+            f"in '{target_col}': {unexpected}"
+        )
+    if len(unique_vals) < 2:
+        logger.error(
+            "[validate] Target '%s' has only 1 class: %s",
+            target_col, unique_vals,
+        )
+        raise ValueError(
+            f"Target '{target_col}' has only "
+            f"1 class present: {unique_vals}"
         )
 
 
-def _check_non_negative(df: pd.DataFrame, columns: list[str]) -> None:
+def _check_non_negative(
+    df: pd.DataFrame, columns: list[str],
+) -> None:
     for col in columns:
         if col not in df.columns:
             continue
         if (df[col].dropna() < 0).any():
-            logger.warning("[validate] Column '%s' contains negative values", col)
+            logger.warning(
+                "[validate] Column '%s' has negatives",
+                col,
+            )
 
 
 def validate_dataframe(
@@ -55,14 +81,19 @@ def validate_dataframe(
     min_rows: int | None = None,
 ) -> None:
     logger.info(
-        "[validate] Starting | rows=%d, cols=%d", df.shape[0], df.shape[1]
+        "[validate] Starting | rows=%d, cols=%d",
+        df.shape[0], df.shape[1],
     )
 
     if min_rows is not None and len(df) < min_rows:
         logger.error(
-            "[validate] Too few rows: got %d, need %d", len(df), min_rows
+            "[validate] Too few rows: got %d, need %d",
+            len(df), min_rows,
         )
-        raise ValueError(f"DataFrame has {len(df)} rows, need {min_rows}")
+        raise ValueError(
+            f"DataFrame has {len(df)} rows, "
+            f"need {min_rows}"
+        )
 
     if required_columns:
         _check_required_columns(df, required_columns)
@@ -71,7 +102,9 @@ def validate_dataframe(
         _check_missing_values(df, required_columns)
 
     if target_column and target_allowed_values is not None:
-        _check_target_values(df, target_column, target_allowed_values)
+        _check_target_values(
+            df, target_column, target_allowed_values,
+        )
 
     if numeric_non_negative_cols:
         _check_non_negative(df, numeric_non_negative_cols)

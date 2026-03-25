@@ -10,9 +10,10 @@ from __future__ import annotations
 import pandas as pd
 
 from src.logger import get_logger
+
 logger = get_logger(__name__)
 
-_FOG_CODES   = {45, 48}
+_FOG_CODES = {45, 48}
 _STORM_CODES = {95, 96, 99, 65, 67, 75, 77}
 _NIGHT_HOURS = set(range(0, 6)) | {22, 23}
 
@@ -38,24 +39,30 @@ def _rename_columns(df):
 
 
 def _engineer_binary_flags(df):
-    """Create binary indicator columns from weather, time, and date features.
+    """Create binary indicator columns.
 
     Args:
         df: DataFrame with lowercase column names.
 
     Returns:
-        DataFrame with added is_foggy, is_stormy, is_night_departure, and is_weekend columns.
+        DataFrame with added binary flag columns.
     """
     df = df.copy()
     if "weathercode" in df.columns:
-        df["is_foggy"]  = df["weathercode"].isin(_FOG_CODES).astype(int)
-        df["is_stormy"] = df["weathercode"].isin(_STORM_CODES).astype(int)
+        df["is_foggy"] = (
+            df["weathercode"].isin(_FOG_CODES).astype(int)
+        )
+        df["is_stormy"] = (
+            df["weathercode"].isin(_STORM_CODES).astype(int)
+        )
     else:
         df["is_foggy"] = df["is_stormy"] = 0
 
     if "crs_dep_time" in df.columns:
         dep_hour = (df["crs_dep_time"] // 100).clip(0, 23)
-        df["is_night_departure"] = dep_hour.isin(_NIGHT_HOURS).astype(int)
+        df["is_night_departure"] = (
+            dep_hour.isin(_NIGHT_HOURS).astype(int)
+        )
     else:
         df["is_night_departure"] = 0
 
@@ -64,7 +71,10 @@ def _engineer_binary_flags(df):
             {"year": 2023, "month": df["month"], "day": df["day"]},
             errors="coerce",
         )
-        df["is_weekend"] = dates.dt.weekday.isin([5, 6]).astype(int).fillna(0).astype(int)
+        df["is_weekend"] = (
+            dates.dt.weekday.isin([5, 6])
+            .astype(int).fillna(0).astype(int)
+        )
     else:
         df["is_weekend"] = 0
 
@@ -72,26 +82,28 @@ def _engineer_binary_flags(df):
 
 
 def _drop_unused_columns(df, target_column):
-    """Keep only the columns needed for modelling, drop the rest.
+    """Keep only the columns needed for modelling.
 
     Args:
         df: DataFrame after feature engineering.
         target_column: Name of the target column to retain.
 
     Returns:
-        DataFrame containing only the selected feature and target columns.
+        DataFrame with selected columns only.
     """
     keep = [
-        target_column, "temperature_2m", "precipitation", "windspeed_10m",
-        "cloudcover", "flight_duration_s", "air_time", "distance",
-        "is_foggy", "is_stormy", "is_night_departure", "is_weekend",
+        target_column, "temperature_2m", "precipitation",
+        "windspeed_10m", "cloudcover", "flight_duration_s",
+        "air_time", "distance",
+        "is_foggy", "is_stormy", "is_night_departure",
+        "is_weekend",
     ]
     available = [c for c in keep if c in df.columns]
     return df[available]
 
 
 def _handle_missing_values(df):
-    """Impute missing values using median for numerics and zero for binary flags.
+    """Impute missing values.
 
     Args:
         df: DataFrame that may contain NaN values.
@@ -107,7 +119,10 @@ def _handle_missing_values(df):
     for col in numeric_cols:
         if col in df.columns and df[col].isna().any():
             df[col] = df[col].fillna(df[col].median())
-    for col in ["is_foggy", "is_stormy", "is_night_departure", "is_weekend"]:
+    for col in [
+        "is_foggy", "is_stormy",
+        "is_night_departure", "is_weekend",
+    ]:
         if col in df.columns:
             df[col] = df[col].fillna(0).astype(int)
     return df
@@ -118,12 +133,19 @@ def clean_dataframe(
     target_column: str = "delayed",
 ) -> pd.DataFrame:
     """Run the full cleaning pipeline on the raw DataFrame."""
-    logger.info("[clean_data] Starting. Input shape: %s", df.shape)
+    logger.info(
+        "[clean_data] Starting. Input shape: %s", df.shape
+    )
     df = _rename_columns(df)
     df = _engineer_binary_flags(df)
     df = _drop_unused_columns(df, target_column)
     df = _handle_missing_values(df)
     if target_column not in df.columns:
-        raise ValueError(f"[clean_data] Target '{target_column}' not found after cleaning.")
-    logger.info("[clean_data] Done. Output shape: %s", df.shape)
+        raise ValueError(
+            f"[clean_data] Target '{target_column}' "
+            "not found after cleaning."
+        )
+    logger.info(
+        "[clean_data] Done. Output shape: %s", df.shape
+    )
     return df
