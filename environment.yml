@@ -9,7 +9,6 @@ dependencies:
   - scikit-learn
   - joblib
   - pytest
-  - wandb
   - pytest-cov
   - matplotlib
   - seaborn
@@ -17,3 +16,9 @@ dependencies:
   - ipykernel
   - jupyter
   - python-dotenv
+  - pip:
+    - wandb
+    - fastapi
+    - uvicorn[standard]
+    - pydantic
+    - httpx
