@@ -49,14 +49,20 @@ class FlightFeatures(BaseModel):
 
 
 class PredictResponse(BaseModel):
+<<<<<<< caspar/docker-render
     """Structured prediction output."""
+=======
+>>>>>>> dev
     prediction: int
     probability: float
     label: str
 
 
 class HealthResponse(BaseModel):
+<<<<<<< caspar/docker-render
     """Health check response."""
+=======
+>>>>>>> dev
     status: str
 
 
@@ -100,6 +106,7 @@ def predict(features: FlightFeatures):
     """
     try:
         df = pd.DataFrame([features.model_dump()])
+<<<<<<< caspar/docker-render
         df = clean_dataframe(df, inference_mode=True)
         validate_dataframe(
             df,
@@ -107,6 +114,10 @@ def predict(features: FlightFeatures):
                 "validation", {}
             ).get("numeric_non_negative_cols", []),
         )
+=======
+        df = clean_dataframe(df)
+        validate_dataframe(df)
+>>>>>>> dev
 
         pred = app.state.model.predict(df)[0]
         proba = app.state.model.predict_proba(df)[0]
