@@ -1,0 +1,39 @@
+# .github/workflows/ci.yml
+name: CI
+
+
+on:
+  pull_request:
+    branches: [main, dev]
+
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov
+
+
+      - name: Run tests
+        run: pytest -q --tb=short
+
+
+      - name: Check no print() in src/
+        run: |
+          if grep -rn 'print(' src/; then
+            echo 'ERROR: print() found in src/ — use logger instead'
+            exit 1
+          fi
