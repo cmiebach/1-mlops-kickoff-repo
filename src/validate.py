@@ -1,3 +1,10 @@
+"""
+Module: Data Validation
+-----------------------
+Role: Schema, type, and completeness checks for DataFrames.
+Input: pandas.DataFrame.
+Output: None (raises on failure).
+"""
 from __future__ import annotations
 
 import pandas as pd
@@ -9,6 +16,7 @@ logger = get_logger(__name__)
 def _check_required_columns(
     df: pd.DataFrame, required: list[str],
 ) -> None:
+    """Raise if any required columns are missing."""
     missing = [c for c in required if c not in df.columns]
     if missing:
         logger.error(
@@ -21,6 +29,7 @@ def _check_required_columns(
 def _check_missing_values(
     df: pd.DataFrame, columns: list[str],
 ) -> None:
+    """Raise if any listed columns contain NaN values."""
     for col in columns:
         if col in df.columns and df[col].isna().any():
             logger.error(
@@ -35,6 +44,7 @@ def _check_missing_values(
 def _check_target_values(
     df: pd.DataFrame, target_col: str, allowed: list,
 ) -> None:
+    """Raise if the target has unexpected or single-class values."""
     unique_vals = set(df[target_col].dropna().unique())
     unexpected = unique_vals - set(allowed)
     if unexpected:
@@ -61,6 +71,7 @@ def _check_target_values(
 def _check_non_negative(
     df: pd.DataFrame, columns: list[str],
 ) -> None:
+    """Warn if any of the given columns contain negatives."""
     for col in columns:
         if col not in df.columns:
             continue
@@ -80,6 +91,22 @@ def validate_dataframe(
     numeric_non_negative_cols: list[str] | None = None,
     min_rows: int | None = None,
 ) -> None:
+    """Validate DataFrame schema, types, and completeness."""
+
+    # --- GUARD 1: None / type check ---
+    if df is None or not isinstance(df, pd.DataFrame):
+        raise TypeError(
+            "Validation failed: expected a pandas "
+            f"DataFrame, got {type(df)}"
+        )
+
+    # --- GUARD 2: Empty DataFrame check ---
+    if df.empty:
+        raise ValueError(
+            "Validation failed: DataFrame is empty "
+            "— no rows to process"
+        )
+
     logger.info(
         "[validate] Starting | rows=%d, cols=%d",
         df.shape[0], df.shape[1],
@@ -106,7 +133,16 @@ def validate_dataframe(
             df, target_column, target_allowed_values,
         )
 
+    # --- GUARD 3: Dtype check for numeric columns ---
     if numeric_non_negative_cols:
+        for col in numeric_non_negative_cols:
+            if col in df.columns and not (
+                pd.api.types.is_numeric_dtype(df[col])
+            ):
+                raise TypeError(
+                    f"Validation failed: column '{col}' "
+                    f"must be numeric, got {df[col].dtype}"
+                )
         _check_non_negative(df, numeric_non_negative_cols)
 
     logger.info("[validate] All checks passed")

@@ -1,6 +1,5 @@
 import pytest
 import pandas as pd
-import numpy as np
 
 from src.clean_data import (
     _rename_columns,
@@ -16,7 +15,7 @@ def bts_df():
     """Raw BTS-style DataFrame before renaming."""
     return pd.DataFrame({
         "MONTH":               [6, 7, 8],
-        "DAY":                 [3, 15, 26],   # Saturday=3 Jun, Saturday=15 Jul, Saturday=26 Aug
+        "DAY":                 [3, 15, 26],
         "CRS_DEP_TIME":        [800, 2300, 100],
         "ARR_DELAY":           [10.0, 30.0, -5.0],
         "AIRLINE":             ["BA", "AA", "UA"],
@@ -75,7 +74,10 @@ class TestEngineerBinaryFlags:
 
     def test_night_hours_set_is_night_departure(self):
         # 0000 = midnight (night), 0800 = morning (day), 2200 = night
-        df = pd.DataFrame({"weathercode": [0, 0, 0], "crs_dep_time": [0, 800, 2200]})
+        df = pd.DataFrame({
+            "weathercode": [0, 0, 0],
+            "crs_dep_time": [0, 800, 2200],
+        })
         result = _engineer_binary_flags(df)
         assert list(result["is_night_departure"]) == [1, 0, 1]
 
@@ -113,7 +115,8 @@ class TestDropUnusedColumns:
         result = _drop_unused_columns(df, "delayed")
         expected_keep = {
             "delayed", "temperature_2m", "precipitation", "windspeed_10m",
-            "visibility", "cloudcover", "flight_duration_s", "air_time", "distance",
+            "visibility", "cloudcover", "flight_duration_s",
+            "air_time", "distance",
             "is_foggy", "is_stormy", "is_night_departure", "is_weekend",
         }
         assert set(result.columns).issubset(expected_keep)
@@ -181,6 +184,12 @@ class TestCleanDataframe:
 
     def test_binary_flags_are_integers(self, bts_df):
         result = clean_dataframe(bts_df)
-        for col in ["is_foggy", "is_stormy", "is_night_departure", "is_weekend"]:
+        binary_cols = [
+            "is_foggy", "is_stormy",
+            "is_night_departure", "is_weekend",
+        ]
+        for col in binary_cols:
             if col in result.columns:
-                assert result[col].dtype in [int, "int64", "int32"]
+                assert result[col].dtype in [
+                    int, "int64", "int32",
+                ]

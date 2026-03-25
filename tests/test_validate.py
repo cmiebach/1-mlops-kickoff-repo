@@ -3,7 +3,6 @@ Tests for src/validate.py
 """
 import pytest
 import pandas as pd
-import numpy as np
 
 from src.validate import (
     _check_required_columns,
@@ -29,7 +28,9 @@ def good_df():
 
 class TestCheckRequiredColumns:
     def test_passes_when_all_present(self, good_df):
-        _check_required_columns(good_df, ["delayed", "windspeed_10m"])  # no error
+        _check_required_columns(
+            good_df, ["delayed", "windspeed_10m"],
+        )
 
     def test_raises_on_missing_column(self, good_df):
         with pytest.raises(ValueError, match="Missing columns"):
@@ -110,14 +111,21 @@ class TestValidateDataframe:
     def test_raises_if_too_few_rows(self, good_df):
         small = good_df.head(10)
         with pytest.raises(ValueError, match="rows, need"):
-            validate_dataframe(small, required_columns=["delayed"], min_rows=50)
+            validate_dataframe(
+                small,
+                required_columns=["delayed"],
+                min_rows=50,
+            )
 
     def test_raises_on_missing_column(self, good_df):
         with pytest.raises(ValueError, match="Missing columns"):
             validate_dataframe(good_df, required_columns=["nonexistent"])
 
     def test_skips_missing_value_check_when_disabled(self):
-        df = pd.DataFrame({"delayed": [0, 1] * 30, "windspeed_10m": [float("nan")] * 60})
+        df = pd.DataFrame({
+            "delayed": [0, 1] * 30,
+            "windspeed_10m": [float("nan")] * 60,
+        })
         # Should not raise because check_missing_values=False
         validate_dataframe(df, required_columns=["delayed"],
                            check_missing_values=False, min_rows=50)
@@ -130,4 +138,41 @@ class TestValidateDataframe:
                 required_columns=["delayed"],
                 target_column="delayed",
                 target_allowed_values=[0, 1],
+            )
+
+
+# ---------------------------------------------------------------------------
+# Validation guards (None, empty, dtype)
+# ---------------------------------------------------------------------------
+
+class TestValidateDataframeGuards:
+    """Tests for the three validation guards."""
+
+    def test_rejects_none_input(self):
+        with pytest.raises(
+            TypeError, match="expected a pandas DataFrame"
+        ):
+            validate_dataframe(None)
+
+    def test_rejects_non_dataframe_input(self):
+        with pytest.raises(
+            TypeError, match="expected a pandas DataFrame"
+        ):
+            validate_dataframe({"a": [1, 2]})
+
+    def test_rejects_empty_dataframe(self):
+        with pytest.raises(ValueError, match="empty"):
+            validate_dataframe(pd.DataFrame())
+
+    def test_rejects_wrong_dtype(self, good_df):
+        bad = good_df.copy()
+        bad["windspeed_10m"] = "not_a_number"
+        with pytest.raises(
+            TypeError, match="must be numeric"
+        ):
+            validate_dataframe(
+                bad,
+                numeric_non_negative_cols=[
+                    "windspeed_10m"
+                ],
             )

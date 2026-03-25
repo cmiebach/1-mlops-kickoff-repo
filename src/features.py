@@ -13,9 +13,11 @@ class _BinarySum:
     """Picklable transformer that row-sums binary columns."""
 
     def __init__(self, cols):
+        """Store the column names to sum."""
         self.cols = cols
 
     def __call__(self, X):
+        """Sum binary columns and return a single column."""
         import pandas as pd
         if not hasattr(X, "columns"):
             df = pd.DataFrame(X, columns=self.cols)

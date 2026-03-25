@@ -5,7 +5,6 @@ import pytest
 import yaml
 import pandas as pd
 import numpy as np
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from src.main import load_config
@@ -24,7 +23,11 @@ class TestLoadConfig:
 
     def test_returns_correct_values(self, tmp_path):
         cfg_path = tmp_path / "config.yaml"
-        cfg_path.write_text(yaml.dump({"target_column": "delayed", "problem_type": "classification"}))
+        cfg = {
+            "target_column": "delayed",
+            "problem_type": "classification",
+        }
+        cfg_path.write_text(yaml.dump(cfg))
         result = load_config(str(cfg_path))
         assert result["target_column"] == "delayed"
         assert result["problem_type"] == "classification"
@@ -86,14 +89,18 @@ class TestMain:
         df = self._make_df()
         mock_model = MagicMock()
         mock_model.predict.return_value = np.zeros(len(df))
-        mock_predictions = pd.DataFrame({"prediction": np.zeros(len(df)), "probability": np.zeros(len(df))})
+        mock_predictions = pd.DataFrame({
+            "prediction": np.zeros(len(df)),
+            "probability": np.zeros(len(df)),
+        })
 
         with (
             patch("src.main.load_config", return_value=mock_config),
             patch("src.main.load_raw_data", return_value=df),
             patch("src.main.clean_dataframe", return_value=df),
             patch("src.main.validate_dataframe"),
-            patch("src.main.get_feature_preprocessor", return_value=MagicMock()),
+            patch("src.main.get_feature_preprocessor",
+                  return_value=MagicMock()),
             patch("src.main.train_model", return_value=mock_model),
             patch("src.main.evaluate_model", return_value={"accuracy": 0.9}),
             patch("src.main.make_plots", return_value=MagicMock()),
@@ -117,9 +124,12 @@ class TestMain:
             patch("src.main.load_raw_data", return_value=df),
             patch("src.main.clean_dataframe", return_value=df),
             patch("src.main.validate_dataframe"),
-            patch("src.main.get_feature_preprocessor", return_value=MagicMock()),
+            patch("src.main.get_feature_preprocessor",
+                  return_value=MagicMock()),
             patch("src.main.train_model", return_value=mock_model),
-            patch("src.main.evaluate_model", return_value={"accuracy": 0.9}) as mock_eval,
+            patch("src.main.evaluate_model",
+                  return_value={"accuracy": 0.9}
+                  ) as mock_eval,
             patch("src.main.make_plots", return_value=MagicMock()),
             patch("src.main.save_metrics"),
             patch("src.main.save_plots"),
@@ -142,7 +152,8 @@ class TestMain:
             patch("src.main.load_raw_data", return_value=df),
             patch("src.main.clean_dataframe", return_value=df),
             patch("src.main.validate_dataframe"),
-            patch("src.main.get_feature_preprocessor", return_value=MagicMock()),
+            patch("src.main.get_feature_preprocessor",
+                  return_value=MagicMock()),
             patch("src.main.train_model", return_value=mock_model),
             patch("src.main.evaluate_model", return_value={"accuracy": 0.9}),
             patch("src.main.make_plots", return_value=MagicMock()),
@@ -154,4 +165,9 @@ class TestMain:
         ):
             from src.main import main
             main()
-            mock_save.assert_called_once_with({"accuracy": 0.9}, mock_config["paths"]["metrics_path"])
+            metrics_path = mock_config["paths"][
+                "metrics_path"
+            ]
+            mock_save.assert_called_once_with(
+                {"accuracy": 0.9}, metrics_path,
+            )

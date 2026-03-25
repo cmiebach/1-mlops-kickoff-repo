@@ -4,6 +4,7 @@ from pathlib import Path
 
 
 def get_logger(name: str) -> logging.Logger:
+    """Return a logger that writes to console and file."""
     log_dir = Path('logs')
     log_dir.mkdir(exist_ok=True)
 

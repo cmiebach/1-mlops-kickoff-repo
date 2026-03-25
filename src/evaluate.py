@@ -129,6 +129,7 @@ def evaluate_model(
 def compute_metrics(
     model, X, y, metrics: list[str],
 ) -> dict[str, float]:
+    """Compute a subset of metrics for the given model."""
     y_pred = model.predict(X)
     out: dict[str, float] = {}
 
@@ -182,6 +183,7 @@ def make_plots(model, X_eval, y_eval):
 
 
 def save_metrics(metrics: dict, path: str) -> None:
+    """Write metrics dict to a JSON file."""
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(json.dumps(metrics, indent=2))

@@ -14,6 +14,7 @@ logger = get_logger(__name__)
 
 @dataclass
 class TrainArtifacts:
+    """Container for training outputs."""
     model: Pipeline
     X_valid: pd.DataFrame
     y_valid: pd.Series

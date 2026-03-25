@@ -34,6 +34,7 @@ logger = get_logger(__name__)
 # ---------------------------------------------------------------------------
 
 def _wandb_is_enabled(cfg: Dict[str, Any]) -> bool:
+    """Check whether W&B tracking is enabled in config."""
     wandb_cfg = cfg.get('wandb')
     if not isinstance(wandb_cfg, dict):
         return False
@@ -41,6 +42,7 @@ def _wandb_is_enabled(cfg: Dict[str, Any]) -> bool:
 
 
 def _wandb_get_str(cfg: Dict[str, Any], key: str, default: str = '') -> str:
+    """Safely retrieve a string from the wandb config block."""
     wandb_cfg = cfg.get('wandb')
     if not isinstance(wandb_cfg, dict):
         return default
@@ -51,6 +53,7 @@ def _wandb_get_str(cfg: Dict[str, Any], key: str, default: str = '') -> str:
 def _wandb_get_bool(
     cfg: Dict[str, Any], key: str, default: bool = False
 ) -> bool:
+    """Safely retrieve a boolean from the wandb config block."""
     wandb_cfg = cfg.get('wandb')
     if not isinstance(wandb_cfg, dict):
         return default
@@ -58,6 +61,7 @@ def _wandb_get_bool(
 
 
 def _wandb_get_list(cfg: Dict[str, Any], key: str) -> List[str]:
+    """Safely retrieve a list from the wandb config block."""
     wandb_cfg = cfg.get('wandb')
     if not isinstance(wandb_cfg, dict):
         return []
@@ -66,6 +70,7 @@ def _wandb_get_list(cfg: Dict[str, Any], key: str) -> List[str]:
 
 
 def load_config(path: str = "config.yaml") -> dict:
+    """Load and return the YAML config file."""
     p = Path(path)
     if not p.exists():
         raise FileNotFoundError(f"Config not found: {p}")
@@ -73,6 +78,7 @@ def load_config(path: str = "config.yaml") -> dict:
 
 
 def main() -> None:
+    """Run the end-to-end ML pipeline with optional W&B tracking."""
     project_root = Path(__file__).resolve().parents[1]
     load_dotenv(dotenv_path=project_root / '.env', override=False)
 

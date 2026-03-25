@@ -7,6 +7,7 @@ Output: Predictions (Array or DataFrame).
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import joblib
@@ -19,24 +20,42 @@ logger = get_logger(__name__)
 
 
 def load_model_from_registry(cfg: dict):
-    """Download the 'prod' model artifact from W&B."""
-    wandb_cfg = cfg.get('wandb', {})
-    project = wandb_cfg.get('project', '')
-    artifact_name = wandb_cfg.get(
-        'model_artifact_name', 'model'
-    )
+    """Download the promoted model artifact from W&B.
 
-    api = wandb.Api()
-    artifact = api.artifact(
-        f'{project}/{artifact_name}:prod', type='model'
-    )
-    artifact_dir = artifact.download()
-    model_path = Path(artifact_dir) / 'model.joblib'
+    Falls back to local model.joblib when
+    MODEL_SOURCE != 'wandb'.
+    """
+    model_source = os.getenv("MODEL_SOURCE", "local")
+
+    if model_source == "wandb":
+        wandb_cfg = cfg.get("wandb", {})
+        project = wandb_cfg.get("project", "")
+        entity = os.getenv("WANDB_ENTITY", "")
+        artifact_name = wandb_cfg.get(
+            "model_artifact_name", "model"
+        )
+        alias = os.getenv("WANDB_MODEL_ALIAS", "prod")
+
+        full_name = (
+            f"{entity}/{project}/{artifact_name}:{alias}"
+        )
+        logger.info(
+            "Downloading model from W&B: %s", full_name
+        )
+        api = wandb.Api()
+        artifact = api.artifact(
+            full_name, type="model"
+        )
+        artifact_dir = artifact.download()
+        model_path = Path(artifact_dir) / "model.joblib"
+        logger.info("Model loaded from W&B registry")
+        return joblib.load(model_path)
+
+    local_path = Path(cfg["paths"]["model_path"])
     logger.info(
-        'Model loaded from W&B registry: %s:prod',
-        artifact_name,
+        "Loading model from local path: %s", local_path
     )
-    return joblib.load(model_path)
+    return joblib.load(local_path)
 
 
 def run_inference(
