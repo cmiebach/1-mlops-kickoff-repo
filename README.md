@@ -5,6 +5,30 @@
 **Status:** In Development (Modularised Pipeline)
 
 ---
+## ⚡ Quick Start
+```bash
+# 1. Clone and set up environment
+git clone https://github.com/cmiebach/1-mlops-kickoff-repo.git
+cd 1-mlops-kickoff-repo
+conda env create -f environment.yml
+conda activate mlops
+
+# 2. Add your secrets
+echo "WANDB_API_KEY=your_key_here" > .env
+
+# 3. Run the full pipeline
+python -m src.main
+
+# 4. Run tests
+pytest -q
+
+# 5. Hit the live API
+curl https://your-app.onrender.com/health
+```
+
+> Full setup details in [Section 6](#6-how-to-run--test). API docs at `https://your-app.onrender.com/docs`.
+
+---
 
 ## 1. Business Objective
 
