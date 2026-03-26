@@ -7,6 +7,7 @@ Output: Predictions (Array or DataFrame).
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import joblib
@@ -19,17 +20,42 @@ logger = get_logger(__name__)
 
 
 def load_model_from_registry(cfg: dict):
-    """Download the 'prod' model artifact from W&B registry."""
-    wandb_cfg = cfg.get('wandb', {})
-    project = wandb_cfg.get('project', '')
-    artifact_name = wandb_cfg.get('model_artifact_name', 'model')
+    """Download the promoted model artifact from W&B.
 
-    api = wandb.Api()
-    artifact = api.artifact(f'{project}/{artifact_name}:prod', type='model')
-    artifact_dir = artifact.download()
-    model_path = Path(artifact_dir) / 'model.joblib'
-    logger.info('Model loaded from W&B registry: %s:prod', artifact_name)
-    return joblib.load(model_path)
+    Falls back to local model.joblib when
+    MODEL_SOURCE != 'wandb'.
+    """
+    model_source = os.getenv("MODEL_SOURCE", "local")
+
+    if model_source == "wandb":
+        wandb_cfg = cfg.get("wandb", {})
+        project = wandb_cfg.get("project", "")
+        entity = os.getenv("WANDB_ENTITY", "")
+        artifact_name = wandb_cfg.get(
+            "model_artifact_name", "model"
+        )
+        alias = os.getenv("WANDB_MODEL_ALIAS", "prod")
+
+        full_name = (
+            f"{entity}/{project}/{artifact_name}:{alias}"
+        )
+        logger.info(
+            "Downloading model from W&B: %s", full_name
+        )
+        api = wandb.Api()
+        artifact = api.artifact(
+            full_name, type="model"
+        )
+        artifact_dir = artifact.download()
+        model_path = Path(artifact_dir) / "model.joblib"
+        logger.info("Model loaded from W&B registry")
+        return joblib.load(model_path)
+
+    local_path = Path(cfg["paths"]["model_path"])
+    logger.info(
+        "Loading model from local path: %s", local_path
+    )
+    return joblib.load(local_path)
 
 
 def run_inference(
@@ -37,25 +63,32 @@ def run_inference(
     X_infer: pd.DataFrame,
     include_proba: bool = True,
 ) -> pd.DataFrame:
-    """
-    Run the model on new data and return predictions.
+    """Run the model on new data and return predictions.
 
     Args:
         model: Fitted sklearn model or pipeline.
         X_infer: Feature DataFrame to predict on.
-        include_proba: If True and supported, include probability column.
+        include_proba: Include probability column.
 
     Returns:
-        DataFrame with 'prediction' and optional 'probability'.
+        DataFrame with 'prediction' and optional
+        'probability'.
     """
-    logger.info("[infer] Starting inference on %d rows", len(X_infer))
+    logger.info(
+        "[infer] Starting inference on %d rows",
+        len(X_infer),
+    )
 
     if X_infer.empty:
         logger.error("[infer] Input DataFrame is empty")
         raise ValueError("Input DataFrame is empty.")
 
     if not hasattr(model, "predict"):
-        logger.error("[infer] Model does not implement predict() — got type: %s", type(model).__name__)
+        logger.error(
+            "[infer] Model does not implement predict() "
+            "— got type: %s",
+            type(model).__name__,
+        )
         raise TypeError("Model must implement predict().")
 
     predictions = model.predict(X_infer)
@@ -70,7 +103,8 @@ def run_inference(
         result["probability"] = probabilities
 
     logger.info(
-        "[infer] Done | predicted_delayed=%d, predicted_on_time=%d",
+        "[infer] Done | predicted_delayed=%d, "
+        "predicted_on_time=%d",
         int((predictions == 1).sum()),
         int((predictions == 0).sum()),
     )

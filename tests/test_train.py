@@ -7,7 +7,7 @@ import pytest
 from sklearn.pipeline import Pipeline
 
 from src.features import get_feature_preprocessor
-from src.train import TrainArtifacts, train_model
+from src.train import train_model
 
 
 # ---------------------------------------------------------------------------
@@ -40,9 +40,15 @@ def preprocessor():
     return get_feature_preprocessor(
         quantile_bin_cols=["windspeed_10m"],
         categorical_onehot_cols=[],
-        numeric_passthrough_cols=["temperature_2m", "precipitation", "visibility",
-                                  "cloudcover", "flight_duration_s"],
-        binary_sum_cols=["is_foggy", "is_stormy", "is_night_departure", "is_weekend"],
+        numeric_passthrough_cols=[
+            "temperature_2m", "precipitation",
+            "visibility", "cloudcover",
+            "flight_duration_s",
+        ],
+        binary_sum_cols=[
+            "is_foggy", "is_stormy",
+            "is_night_departure", "is_weekend",
+        ],
         n_bins=4,
     )
 
