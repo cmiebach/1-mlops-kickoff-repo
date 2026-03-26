@@ -29,7 +29,8 @@ class FlightFeatures(BaseModel):
         ..., ge=0, description="Rainfall (mm)",
     )
     windspeed_10m: float = Field(
-        ..., ge=0, description="Wind speed at 10m (km/h)",
+        ..., ge=0,
+        description="Wind speed at 10m (km/h)",
     )
     winddirection_10m: float = Field(
         ..., ge=0, le=360,
@@ -49,20 +50,14 @@ class FlightFeatures(BaseModel):
 
 
 class PredictResponse(BaseModel):
-<<<<<<< caspar/docker-render
     """Structured prediction output."""
-=======
->>>>>>> dev
     prediction: int
     probability: float
     label: str
 
 
 class HealthResponse(BaseModel):
-<<<<<<< caspar/docker-render
     """Health check response."""
-=======
->>>>>>> dev
     status: str
 
 
@@ -77,7 +72,9 @@ async def lifespan(app: FastAPI):
         cfg = yaml.safe_load(f)
     app.state.cfg = cfg
     app.state.model = load_model_from_registry(cfg)
-    logger.info("Model loaded at startup — ready to serve")
+    logger.info(
+        "Model loaded at startup — ready to serve"
+    )
     yield
     logger.info("Shutting down API")
 
@@ -106,18 +103,15 @@ def predict(features: FlightFeatures):
     """
     try:
         df = pd.DataFrame([features.model_dump()])
-<<<<<<< caspar/docker-render
         df = clean_dataframe(df, inference_mode=True)
         validate_dataframe(
             df,
-            numeric_non_negative_cols=app.state.cfg.get(
-                "validation", {}
-            ).get("numeric_non_negative_cols", []),
+            numeric_non_negative_cols=(
+                app.state.cfg
+                .get("validation", {})
+                .get("numeric_non_negative_cols", [])
+            ),
         )
-=======
-        df = clean_dataframe(df)
-        validate_dataframe(df)
->>>>>>> dev
 
         pred = app.state.model.predict(df)[0]
         proba = app.state.model.predict_proba(df)[0]
@@ -129,9 +123,13 @@ def predict(features: FlightFeatures):
         result = PredictResponse(
             prediction=int(pred),
             probability=round(prob_delayed, 4),
-            label="delayed" if pred == 1 else "on_time",
+            label=(
+                "delayed" if pred == 1 else "on_time"
+            ),
         )
-        logger.info("Prediction: %s", result.model_dump())
+        logger.info(
+            "Prediction: %s", result.model_dump()
+        )
         return result
 
     except Exception as e:
