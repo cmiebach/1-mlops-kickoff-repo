@@ -1,13 +1,11 @@
 """
 Tests for src/load_data.py
 """
-import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
-import numpy as np
 
 from src.load_data import (
     _load_config,
@@ -37,7 +35,8 @@ class TestLoadConfig:
     def test_raises_if_required_key_missing(self, tmp_path):
         import yaml
         cfg_path = tmp_path / "bad_config.yaml"
-        cfg_path.write_text(yaml.dump({"airport": {"icao": "EGLL"}}))  # missing 'data'
+        bad_cfg = {"airport": {"icao": "EGLL"}}
+        cfg_path.write_text(yaml.dump(bad_cfg))
         with pytest.raises(KeyError, match="data"):
             _load_config(cfg_path)
 
@@ -48,7 +47,11 @@ class TestLoadConfig:
 
 def _mock_weather_response():
     """Build a minimal Open-Meteo-style response payload."""
-    times = pd.date_range("2023-06-01", periods=24, freq="h").strftime("%Y-%m-%dT%H:%M").tolist()
+    times = (
+        pd.date_range("2023-06-01", periods=24, freq="h")
+        .strftime("%Y-%m-%dT%H:%M")
+        .tolist()
+    )
     return {
         "hourly": {
             "time": times,
@@ -76,20 +79,35 @@ class TestFetchWeather:
     def test_raises_runtime_error_after_exhausted_retries(self):
         import requests as req
 
-        with patch("src.load_data.requests.get", side_effect=req.RequestException("timeout")):
+        side = req.RequestException("timeout")
+        with patch("src.load_data.requests.get",
+                   side_effect=side):
             with patch("src.load_data.time.sleep"):
-                with pytest.raises(RuntimeError, match="retries exhausted"):
-                    _fetch_weather(51.4, -0.4, "2023-06-01", "2023-06-01",
-                                   ["temperature_2m"], retries=2, backoff=0)
+                with pytest.raises(
+                    RuntimeError, match="retries exhausted"
+                ):
+                    _fetch_weather(
+                        51.4, -0.4,
+                        "2023-06-01", "2023-06-01",
+                        ["temperature_2m"],
+                        retries=2, backoff=0,
+                    )
 
     def test_raises_if_hourly_time_missing(self):
         mock_resp = MagicMock()
         mock_resp.json.return_value = {"hourly": {}}  # no 'time' key
         mock_resp.raise_for_status.return_value = None
 
-        with patch("src.load_data.requests.get", return_value=mock_resp):
-            with pytest.raises(RuntimeError, match="hourly.time"):
-                _fetch_weather(51.4, -0.4, "2023-06-01", "2023-06-01", ["temperature_2m"])
+        with patch("src.load_data.requests.get",
+                   return_value=mock_resp):
+            with pytest.raises(
+                RuntimeError, match="hourly.time"
+            ):
+                _fetch_weather(
+                    51.4, -0.4,
+                    "2023-06-01", "2023-06-01",
+                    ["temperature_2m"],
+                )
 
 
 # ---------------------------------------------------------------------------
@@ -98,8 +116,13 @@ class TestFetchWeather:
 
 class TestFetchFlights:
     def test_returns_dataframe_on_success(self):
-        flights = [{"icao24": "abc", "firstSeen": 1685577600, "lastSeen": 1685584800,
-                    "estDepartureAirport": "EGLL", "estArrivalAirport": "CDG"}]
+        flights = [{
+            "icao24": "abc",
+            "firstSeen": 1685577600,
+            "lastSeen": 1685584800,
+            "estDepartureAirport": "EGLL",
+            "estArrivalAirport": "CDG",
+        }]
         mock_resp = MagicMock()
         mock_resp.json.return_value = flights
         mock_resp.raise_for_status.return_value = None
@@ -117,16 +140,27 @@ class TestFetchFlights:
         mock_resp.raise_for_status.return_value = None
 
         with patch("src.load_data.requests.get", return_value=mock_resp):
-            with pytest.raises(RuntimeError, match="Unexpected response format"):
+            with pytest.raises(
+                RuntimeError,
+                match="Unexpected response format",
+            ):
                 _fetch_flights("EGLL", 0, 1)
 
     def test_raises_runtime_error_after_exhausted_retries(self):
         import requests as req
 
-        with patch("src.load_data.requests.get", side_effect=req.RequestException("err")):
+        side = req.RequestException("err")
+        with patch("src.load_data.requests.get",
+                   side_effect=side):
             with patch("src.load_data.time.sleep"):
-                with pytest.raises(RuntimeError, match="retries exhausted"):
-                    _fetch_flights("EGLL", 0, 1, retries=2, backoff=0)
+                with pytest.raises(
+                    RuntimeError,
+                    match="retries exhausted",
+                ):
+                    _fetch_flights(
+                        "EGLL", 0, 1,
+                        retries=2, backoff=0,
+                    )
 
 
 # ---------------------------------------------------------------------------
@@ -165,7 +199,7 @@ class TestBuildTarget:
     def test_creates_binary_delayed_column(self):
         df = pd.DataFrame({
             "firstSeen":             [1000, 1000, 1000],
-            "lastSeen":              [4600, 4000, 3000],  # durations: 3600, 3000, 2000
+            "lastSeen":              [4600, 4000, 3000],
             "estDepartureAirport":   ["EGLL", "EGLL", "EGLL"],
             "estArrivalAirport":     ["CDG",  "CDG",  "CDG"],
         })
@@ -190,7 +224,9 @@ class TestBuildTarget:
 # ---------------------------------------------------------------------------
 
 class TestLoadRawData:
-    def test_loads_from_disk_if_file_exists(self, minimal_config, raw_df, tmp_path):
+    def test_loads_from_disk_if_file_exists(
+        self, minimal_config, raw_df, tmp_path,
+    ):
         import yaml
         cfg = yaml.safe_load(minimal_config.read_text())
         raw_path = Path(cfg["data"]["raw_path"])
@@ -202,7 +238,10 @@ class TestLoadRawData:
         assert len(result) == len(raw_df)
 
     def test_triggers_fetch_if_file_missing(self, minimal_config, raw_df):
-        with patch("src.load_data.fetch_and_save_raw", return_value=raw_df) as mock_fetch:
+        with patch(
+            "src.load_data.fetch_and_save_raw",
+            return_value=raw_df,
+        ) as mock_fetch:
             result = load_raw_data(minimal_config)
         mock_fetch.assert_called_once_with(minimal_config)
         assert isinstance(result, pd.DataFrame)
@@ -219,7 +258,10 @@ class TestGenerateSample:
 
     def test_has_required_columns(self, minimal_config):
         df = generate_sample(minimal_config)
-        required = ["delayed", "temperature_2m", "windspeed_10m", "weathercode"]
+        required = [
+            "delayed", "temperature_2m",
+            "windspeed_10m", "weathercode",
+        ]
         for col in required:
             assert col in df.columns, f"Missing column: {col}"
 

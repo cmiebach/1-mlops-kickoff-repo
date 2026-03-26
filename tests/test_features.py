@@ -2,7 +2,6 @@ import pickle
 
 import numpy as np
 import pandas as pd
-import pytest
 from sklearn.compose import ColumnTransformer
 
 from src.features import _BinarySum, _make_binary_sum, get_feature_preprocessor

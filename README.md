@@ -2,7 +2,31 @@
 
 **Authors:** Group 2 (Caspar, Jan, Fouad, Lea, Ghezlan)  
 **Course:** MLOps: Master in Business Analytics and Data Science  
-**Status:** In Development (Modularised Pipeline)
+**Status:** Production — Live API on Render
+
+---
+## ⚡ Quick Start
+```bash
+# 1. Clone and set up environment
+git clone https://github.com/cmiebach/1-mlops-kickoff-repo.git
+cd 1-mlops-kickoff-repo
+conda env create -f environment.yml
+conda activate mlops
+
+# 2. Add your secrets
+echo "WANDB_API_KEY=your_key_here" > .env
+
+# 3. Run the full pipeline
+python -m src.main
+
+# 4. Run tests
+pytest -q
+
+# 5. Hit the live API
+curl https://one-mlops-kickoff-repo-9m2q.onrender.com/health
+```
+
+> Full setup details in [Section 6](#6-how-to-run--test). API docs at `https://one-mlops-kickoff-repo-9m2q.onrender.com/docs`.
 
 ---
 
@@ -244,3 +268,95 @@ This is the **only** entry point authorised to write canonical production artifa
 - Produce model and data artifacts for auditability and reproducibility
 - Write tests that validate behaviour, not just that code runs
 - Practise collaborative Git workflows with protected branches and PR reviews
+
+---
+
+## 10. API Usage
+
+The trained model is served via a FastAPI application deployed on Render.
+
+**Live API:** `https://one-mlops-kickoff-repo-9m2q.onrender.com` 
+**W&B Project:** `https://wandb.ai/group-2-mlops/flight-delay-prediction` 
+
+### Health Check
+```bash
+curl https://one-mlops-kickoff-repo-9m2q.onrender.com/health
+# {"status": "ok"}
+```
+
+### Predict Flight Delay
+```bash
+curl -X POST https://one-mlops-kickoff-repo-9m2q.onrender.com/predict \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "temperature_2m": 12.5,
+    "precipitation": 0.2,
+    "windspeed_10m": 25.0,
+    "winddirection_10m": 270.0,
+    "weathercode": 3,
+    "cloudcover": 80.0,
+    "flight_duration_s": 7200
+  }'
+# {"prediction": 0, "probability": 0.23, "label": "on_time"}
+```
+
+### Input Validation
+The API enforces strict input validation via Pydantic. Unexpected or invalid fields return HTTP 422:
+```bash
+# Example: cloudcover > 100 returns 422 Unprocessable Entity
+curl -X POST https://one-mlops-kickoff-repo-9m2q.onrender.com/predict \
+  -H 'Content-Type: application/json' \
+  -d '{"cloudcover": 999, ...}'
+# HTTP 422
+```
+
+### Test Locally
+```bash
+uvicorn src.api:app --reload
+# Then open: http://127.0.0.1:8000/docs
+```
+
+---
+
+## 11. Model Card
+
+| Field | Value |
+|---|---|
+| Model type | Random Forest Classifier (sklearn Pipeline) |
+| Input features | 7 weather + flight features (see Feature Dictionary) |
+| Output | Binary: delayed (1) / on-time (0) + probability score |
+| Training data | Synthetic EGLL departures, Jun–Aug 2023 |
+| Primary metric | F1-Score |
+| Secondary metrics | ROC-AUC, PR-AUC, Brier score, FNR |
+| Known limitations | Trained on synthetic data — real-world accuracy claims require live API validation |
+| Intended use | Operational planning by ground ops staff |
+| Out-of-scope use | Automated ATC decisions, crew routing |
+| W&B Project | [View experiment tracking](https://wandb.ai/group-2-mlops/flight-delay-prediction) |
+| Live API | https://one-mlops-kickoff-repo-9m2q.onrender.com |
+
+---
+
+## 12. Changelog
+
+### v1.0.0 — Production Release
+- FastAPI serving layer (`src/api.py`) with Pydantic input validation
+- W&B experiment tracking and model registry (`prod` alias)
+- Dockerised serving image deployed to Render
+- CI/CD via GitHub Actions (`ci.yml` + `deploy.yml`)
+- Dual-output logging replacing all `print()` statements (`src/logger.py`)
+- `conda-lock.yml` for reproducible Linux builds
+- `requirements.txt` for CI and Docker compatibility
+
+### v0.2.0 — Modularised Pipeline
+- Notebook logic fully migrated to `src/` modules
+- `pytest` test suite added with ≥90% coverage target
+- `config.yaml`-driven configuration — zero hardcoded values
+- Three-way train/validation/test split enforced
+- Protected `main` and `dev` branches with PR workflow
+
+### v0.1.0 — Initial Exploration
+- Exploratory analysis in `notebooks/`
+- Baseline model prototyped in Jupyter
+```
+
+---

@@ -16,3 +16,9 @@ dependencies:
   - ipykernel
   - jupyter
   - python-dotenv
+  - pip:
+    - wandb
+    - fastapi
+    - uvicorn[standard]
+    - pydantic
+    - httpx

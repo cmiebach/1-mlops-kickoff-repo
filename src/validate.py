@@ -1,41 +1,85 @@
+"""
+Module: Data Validation
+-----------------------
+Role: Schema, type, and completeness checks for DataFrames.
+Input: pandas.DataFrame.
+Output: None (raises on failure).
+"""
 from __future__ import annotations
 
-import logging
-
 import pandas as pd
+from src.logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
-def _check_required_columns(df: pd.DataFrame, required: list[str]) -> None:
+def _check_required_columns(
+    df: pd.DataFrame, required: list[str],
+) -> None:
+    """Raise if any required columns are missing."""
     missing = [c for c in required if c not in df.columns]
     if missing:
+        logger.error(
+            "[validate] Missing required columns: %s",
+            missing,
+        )
         raise ValueError(f"Missing columns: {missing}")
 
 
-def _check_missing_values(df: pd.DataFrame, columns: list[str]) -> None:
+def _check_missing_values(
+    df: pd.DataFrame, columns: list[str],
+) -> None:
+    """Raise if any listed columns contain NaN values."""
     for col in columns:
         if col in df.columns and df[col].isna().any():
-            raise ValueError(f"Null values found in column '{col}'")
+            logger.error(
+                "[validate] Null values in column '%s'",
+                col,
+            )
+            raise ValueError(
+                f"Null values found in column '{col}'"
+            )
 
 
-def _check_target_values(df: pd.DataFrame, target_col: str, allowed: list) -> None:
+def _check_target_values(
+    df: pd.DataFrame, target_col: str, allowed: list,
+) -> None:
+    """Raise if the target has unexpected or single-class values."""
     unique_vals = set(df[target_col].dropna().unique())
     unexpected = unique_vals - set(allowed)
     if unexpected:
-        raise ValueError(f"Unexpected target values in '{target_col}': {unexpected}")
-    if len(unique_vals) < 2:
+        logger.error(
+            "[validate] Unexpected target values "
+            "in '%s': %s",
+            target_col, unexpected,
+        )
         raise ValueError(
-            f"Target '{target_col}' has only 1 class present: {unique_vals}"
+            f"Unexpected target values "
+            f"in '{target_col}': {unexpected}"
+        )
+    if len(unique_vals) < 2:
+        logger.error(
+            "[validate] Target '%s' has only 1 class: %s",
+            target_col, unique_vals,
+        )
+        raise ValueError(
+            f"Target '{target_col}' has only "
+            f"1 class present: {unique_vals}"
         )
 
 
-def _check_non_negative(df: pd.DataFrame, columns: list[str]) -> None:
+def _check_non_negative(
+    df: pd.DataFrame, columns: list[str],
+) -> None:
+    """Warn if any of the given columns contain negatives."""
     for col in columns:
         if col not in df.columns:
             continue
         if (df[col].dropna() < 0).any():
-            logger.warning("Column '%s' contains negative values", col)
+            logger.warning(
+                "[validate] Column '%s' has negatives",
+                col,
+            )
 
 
 def validate_dataframe(
@@ -47,8 +91,36 @@ def validate_dataframe(
     numeric_non_negative_cols: list[str] | None = None,
     min_rows: int | None = None,
 ) -> None:
+    """Validate DataFrame schema, types, and completeness."""
+
+    # --- GUARD 1: None / type check ---
+    if df is None or not isinstance(df, pd.DataFrame):
+        raise TypeError(
+            "Validation failed: expected a pandas "
+            f"DataFrame, got {type(df)}"
+        )
+
+    # --- GUARD 2: Empty DataFrame check ---
+    if df.empty:
+        raise ValueError(
+            "Validation failed: DataFrame is empty "
+            "— no rows to process"
+        )
+
+    logger.info(
+        "[validate] Starting | rows=%d, cols=%d",
+        df.shape[0], df.shape[1],
+    )
+
     if min_rows is not None and len(df) < min_rows:
-        raise ValueError(f"DataFrame has {len(df)} rows, need {min_rows}")
+        logger.error(
+            "[validate] Too few rows: got %d, need %d",
+            len(df), min_rows,
+        )
+        raise ValueError(
+            f"DataFrame has {len(df)} rows, "
+            f"need {min_rows}"
+        )
 
     if required_columns:
         _check_required_columns(df, required_columns)
@@ -57,7 +129,20 @@ def validate_dataframe(
         _check_missing_values(df, required_columns)
 
     if target_column and target_allowed_values is not None:
-        _check_target_values(df, target_column, target_allowed_values)
+        _check_target_values(
+            df, target_column, target_allowed_values,
+        )
 
+    # --- GUARD 3: Dtype check for numeric columns ---
     if numeric_non_negative_cols:
+        for col in numeric_non_negative_cols:
+            if col in df.columns and not (
+                pd.api.types.is_numeric_dtype(df[col])
+            ):
+                raise TypeError(
+                    f"Validation failed: column '{col}' "
+                    f"must be numeric, got {df[col].dtype}"
+                )
         _check_non_negative(df, numeric_non_negative_cols)
+
+    logger.info("[validate] All checks passed")
